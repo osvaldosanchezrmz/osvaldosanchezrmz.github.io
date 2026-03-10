@@ -19,7 +19,7 @@
     --card: rgba(9,13,26,0.8);
   }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; }
+  html { scroll-behavior: smooth; scroll-padding-top: 80px; }
   body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); overflow-x: hidden; cursor: none; }
 
   /* ── SQL LOADER ── */
@@ -123,6 +123,8 @@
   .nav-links a::after { content: ''; position: absolute; bottom: -4px; left: 0; width: 0; height: 1px; background: var(--accent); transition: width 0.3s ease; }
   .nav-links a:hover { color: var(--accent); }
   .nav-links a:hover::after { width: 100%; }
+  .nav-linkedin { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--muted); text-decoration: none; letter-spacing: 0.1em; text-transform: uppercase; border: 1px solid rgba(0,245,196,0.2); padding: 0.3rem 0.7rem; transition: all 0.2s; }
+  .nav-linkedin:hover { color: var(--accent); border-color: var(--accent); }
   section { position: relative; z-index: 1; }
 
   /* HERO */
@@ -194,6 +196,19 @@
   /* CERTIFICATIONS — main feature */
   #certs { background: rgba(0,245,196,0.015); border-top: 1px solid rgba(0,245,196,0.06); border-bottom: 1px solid rgba(0,245,196,0.06); }
   .certs-intro { margin-top: 0.5rem; margin-bottom: 2.5rem; color: var(--muted); font-size: 0.95rem; max-width: 55ch; line-height: 1.7; }
+  .cert-verify-link {
+    display: inline-block;
+    margin-top: 0.8rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--muted);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .cert-verify-link:hover { color: var(--accent); border-color: var(--accent); }
   .certs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; }
   .cert-card { background: var(--bg2); border: 1px solid rgba(255,255,255,0.06); padding: 1.6rem 1.8rem; position: relative; overflow: hidden; transition: all 0.3s ease; cursor: none; display: flex; flex-direction: column; gap: 0.8rem; }
   .cert-card::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; transform: scaleX(0); transform-origin: left; transition: transform 0.4s ease; }
@@ -251,6 +266,23 @@
   .link-btn:hover { color: var(--accent); border-color: var(--accent); }
   .link-btn.disabled { opacity: 0.3; pointer-events: none; }
 
+  /* EDUCATION */
+  #education { padding: 6rem 4rem; }
+  .edu-list { display: flex; flex-direction: column; gap: 2rem; margin-top: 3rem; max-width: 860px; }
+  .edu-item { display: grid; grid-template-columns: 200px 1fr; gap: 2rem; padding-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .edu-item:last-child { border-bottom: none; }
+  .edu-meta { display: flex; flex-direction: column; gap: 0.3rem; }
+  .edu-period { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--accent); letter-spacing: 0.08em; }
+  .edu-school { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--muted); }
+  .edu-degree { font-size: 1.05rem; font-weight: 700; color: var(--text); margin-bottom: 0.4rem; }
+  .edu-concentration { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--accent); margin-bottom: 0.8rem; }
+  .edu-detail { font-size: 0.88rem; color: var(--muted); line-height: 1.6; }
+  .edu-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.8rem; }
+  @media (max-width: 640px) {
+    .edu-item { grid-template-columns: 1fr; gap: 0.8rem; }
+    #education { padding-left: 2rem; padding-right: 2rem; }
+  }
+
   /* CONTACT */
   .contact-inner { max-width: 700px; margin: 0 auto; }
   .contact-inner h2 { font-size: clamp(2.5rem, 5vw, 4rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; margin-bottom: 1.5rem; }
@@ -271,125 +303,15 @@
   .reveal { opacity: 0; transform: translateY(30px); transition: all 0.7s ease; }
   .reveal.visible { opacity: 1; transform: translateY(0); }
 
-  /* CHAT WIDGET */
-  #chat-btn {
-    position: fixed; bottom: 2rem; right: 2rem; z-index: 500;
-    width: 56px; height: 56px; border-radius: 50%;
-    background: var(--accent); border: none; cursor: none;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 0 0 0 rgba(0,245,196,0.4);
-    animation: chat-pulse 2.5s ease infinite;
-    transition: transform 0.2s;
-  }
-  #chat-btn:hover { transform: scale(1.1); }
-  #chat-btn svg { width: 24px; height: 24px; color: var(--bg); }
-  @keyframes chat-pulse {
-    0% { box-shadow: 0 0 0 0 rgba(0,245,196,0.4); }
-    70% { box-shadow: 0 0 0 14px rgba(0,245,196,0); }
-    100% { box-shadow: 0 0 0 0 rgba(0,245,196,0); }
-  }
-  #chat-window {
-    position: fixed; bottom: 5.5rem; right: 2rem; z-index: 500;
-    width: 360px; max-height: 520px;
-    background: var(--bg2); border: 1px solid rgba(0,245,196,0.18);
-    box-shadow: 0 24px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,245,196,0.04);
-    display: flex; flex-direction: column;
-    opacity: 0; pointer-events: none; transform: translateY(16px) scale(0.97);
-    transition: all 0.25s ease;
-  }
-  #chat-window.open { opacity: 1; pointer-events: all; transform: translateY(0) scale(1); }
-  .chat-header {
-    padding: 1rem 1.2rem; border-bottom: 1px solid rgba(0,245,196,0.08);
-    display: flex; align-items: center; justify-content: space-between;
-    background: rgba(0,245,196,0.04);
-  }
-  .chat-header-left { display: flex; align-items: center; gap: 0.7rem; }
-  .chat-avatar {
-    width: 32px; height: 32px; border-radius: 50%;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.85rem;
-  }
-  .chat-header-info { line-height: 1.2; }
-  .chat-header-name { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--accent); font-weight: 600; }
-  .chat-header-sub { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: var(--muted); display: flex; align-items: center; gap: 0.3rem; }
-  .chat-online-dot { width: 5px; height: 5px; border-radius: 50%; background: #28c840; display: inline-block; }
-  .chat-close { background: none; border: none; color: var(--muted); cursor: none; font-size: 1.1rem; line-height: 1; transition: color 0.2s; padding: 0.2rem; }
-  .chat-close:hover { color: var(--text); }
-  .chat-messages {
-    flex: 1; overflow-y: auto; padding: 1rem;
-    display: flex; flex-direction: column; gap: 0.8rem;
-    max-height: 340px;
-    scrollbar-width: thin; scrollbar-color: rgba(0,245,196,0.2) transparent;
-  }
-  .chat-messages::-webkit-scrollbar { width: 4px; }
-  .chat-messages::-webkit-scrollbar-thumb { background: rgba(0,245,196,0.2); border-radius: 2px; }
-  .msg { max-width: 88%; display: flex; flex-direction: column; gap: 0.2rem; }
-  .msg.bot { align-self: flex-start; }
-  .msg.user { align-self: flex-end; }
-  .msg-bubble {
-    padding: 0.7rem 0.9rem; font-size: 0.82rem; line-height: 1.6; border-radius: 2px;
-  }
-  .msg.bot .msg-bubble { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); color: var(--text); }
-  .msg.user .msg-bubble { background: rgba(0,245,196,0.12); border: 1px solid rgba(0,245,196,0.2); color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; }
-  .msg-time { font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; color: var(--muted); }
-  .msg.user .msg-time { text-align: right; }
-  .typing-indicator { display: flex; gap: 4px; padding: 0.7rem 0.9rem; align-items: center; }
-  .typing-indicator span { width: 5px; height: 5px; border-radius: 50%; background: var(--muted); animation: typing-bounce 1.2s ease infinite; }
-  .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
-  .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
-  @keyframes typing-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-5px); opacity: 1; } }
-  .chat-suggestions { padding: 0.5rem 1rem 0; display: flex; flex-wrap: wrap; gap: 0.4rem; }
-  .suggestion-btn {
-    font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: var(--muted);
-    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
-    padding: 0.3rem 0.7rem; cursor: none; transition: all 0.2s; text-align: left;
-  }
-  .suggestion-btn:hover { color: var(--accent); border-color: rgba(0,245,196,0.3); background: rgba(0,245,196,0.05); }
-  .chat-input-row {
-    padding: 0.8rem 1rem; border-top: 1px solid rgba(0,245,196,0.08);
-    display: flex; gap: 0.6rem; align-items: center;
-  }
-  #chat-input {
-    flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-    color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 0.78rem;
-    padding: 0.6rem 0.8rem; outline: none; transition: border-color 0.2s;
-    cursor: text;
-  }
-  #chat-input::placeholder { color: var(--muted); }
-  #chat-input:focus { border-color: rgba(0,245,196,0.3); }
-  #chat-send {
-    background: var(--accent); border: none; color: var(--bg);
-    width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
-    cursor: none; transition: opacity 0.2s; flex-shrink: 0;
-  }
-  #chat-send:hover { opacity: 0.85; }
-  #chat-send svg { width: 15px; height: 15px; }
-  #chat-send:disabled { opacity: 0.3; }
-
-  @media (max-width: 1100px) { .skills-grid { grid-template-columns: repeat(2, 1fr); } .certs-grid { grid-template-columns: repeat(2, 1fr); } }
-
-  /* ── SAW GAME ── */
-  #saw-trigger:hover { color: #ff3d3d !important; }
+  /* SAW OVERLAY — hidden by default, shown on trigger */
   #saw-overlay {
     position: fixed; inset: 0; z-index: 10000;
     background: #000; display: flex; flex-direction: column;
     align-items: center; justify-content: center;
     opacity: 0; pointer-events: none; transition: opacity 0.4s;
-    font-family: 'JetBrains Mono', monospace;
-    overflow: hidden;
+    font-family: 'JetBrains Mono', monospace; overflow: hidden;
   }
   #saw-overlay.active { opacity: 1; pointer-events: all; }
-  .saw-scanlines {
-    position: absolute; inset: 0; pointer-events: none; z-index: 1;
-    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.18) 2px, rgba(0,0,0,0.18) 4px);
-    animation: scanlines-move 8s linear infinite;
-  }
-  @keyframes scanlines-move { from { background-position: 0 0; } to { background-position: 0 100px; } }
-  .saw-noise {
-    position: absolute; inset: 0; pointer-events: none; z-index: 2; opacity: 0.04;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  }
   #saw-content { position: relative; z-index: 10; width: 100%; max-width: 680px; padding: 2rem; text-align: center; }
 
   /* INTRO SCREEN */
@@ -526,8 +448,9 @@
     <li><a href="#skills">skills</a></li>
     <li><a href="#certs">certifications</a></li>
     <li><a href="#experience">experience</a></li>
-    <li><a href="#projects">projects</a></li>
+    <li><a href="#education">education</a></li>
     <li><a href="#contact">contact</a></li>
+    <li><a href="https://linkedin.com/in/osvaldo-sanchez-ramirez" target="_blank" rel="noopener">linkedin ↗</a></li>
   </ul>
 </nav>
 
@@ -621,7 +544,7 @@
     <div class="skill-card reveal">
       <span class="skill-icon">🔄</span>
       <div class="skill-name">ETL & Data Pipelines</div>
-      <div class="skill-tags"><span class="tag">Alteryx</span><span class="tag">SQL</span><span class="tag">Python</span><span class="tag">Power Automate</span><span class="tag">REST APIs</span></div>
+      <div class="skill-tags"><span class="tag">Alteryx</span><span class="tag">SQL</span><span class="tag">Python</span><span class="tag">Scikit-learn</span><span class="tag">Power Automate</span><span class="tag">REST APIs</span></div>
     </div>
     <div class="skill-card reveal">
       <span class="skill-icon">📊</span>
@@ -636,7 +559,7 @@
     <div class="skill-card reveal">
       <span class="skill-icon">🤖</span>
       <div class="skill-name">AI & ML <span style="color:var(--accent4);font-size:0.65rem;font-family:'JetBrains Mono',monospace;margin-left:0.3rem">+ differentiator</span></div>
-      <div class="skill-tags"><span class="tag-ai tag">RAG / LLMs</span><span class="tag-ai tag">NLP</span><span class="tag-ai tag">Embeddings</span><span class="tag-ai tag">Scikit-learn</span><span class="tag-ai tag">FAISS</span></div>
+      <div class="skill-tags"><span class="tag-ai tag">RAG / LLMs</span><span class="tag-ai tag">NLP</span><span class="tag-ai tag">Embeddings</span><span class="tag-ai tag">IoT</span><span class="tag-ai tag">UX Design</span></div>
     </div>
   </div>
 </section>
@@ -653,6 +576,7 @@
         <span class="cert-year">Certified</span>
       </div>
       <div class="cert-name">Tableau Certified Data Analyst</div>
+      <a href="https://www.credly.com/badges/tableau-certified-data-analyst"  target="_blank" rel="noopener" class="cert-verify-link">↗ View credential</a>
       <div class="cert-desc">Industry-standard certification validating expertise in data visualization, calculated fields, dashboards, and storytelling with Tableau Desktop and Server.</div>
     </div>
 
@@ -662,6 +586,7 @@
         <span class="cert-year">Advanced</span>
       </div>
       <div class="cert-name">Alteryx Designer Advanced Certification</div>
+      <a href="https://community.alteryx.com/t5/Certification/bd-p/product-certification" target="_blank" rel="noopener" class="cert-verify-link">↗ View credential</a>
       <div class="cert-desc">Advanced-level certification covering complex ETL workflows, spatial analytics, predictive tools, and enterprise-scale data automation in Alteryx Designer.</div>
     </div>
 
@@ -671,6 +596,7 @@
         <span class="cert-year">Certified</span>
       </div>
       <div class="cert-name">Snowflake Data Warehouse — Hands-On Essentials</div>
+      <a href="https://learn.snowflake.com/en/certifications/" target="_blank" rel="noopener" class="cert-verify-link">↗ View credential</a>
       <div class="cert-desc">Practical certification in cloud data warehousing fundamentals: data loading, query optimization, virtual warehouses, and Snowflake architecture.</div>
     </div>
 
@@ -680,6 +606,7 @@
         <span class="cert-year">Certified</span>
       </div>
       <div class="cert-name">Data Analysis Using Python</div>
+      <a href="https://www.coursera.org/learn/data-analysis-with-python" target="_blank" rel="noopener" class="cert-verify-link">↗ View credential</a>
       <div class="cert-desc">IBM certification covering data wrangling, analysis with Pandas & NumPy, data visualization, and building regression models in Python.</div>
     </div>
 
@@ -689,6 +616,7 @@
         <span class="cert-year">Certified</span>
       </div>
       <div class="cert-name">SQL and Relational Databases 101</div>
+      <a href="https://www.coursera.org/learn/sql-data-science" target="_blank" rel="noopener" class="cert-verify-link">↗ View credential</a>
       <div class="cert-desc">IBM foundational certification covering relational database design, SQL queries, joins, stored procedures, and database management fundamentals.</div>
     </div>
 
@@ -698,6 +626,7 @@
         <span class="cert-year">2024</span>
       </div>
       <div class="cert-name">Certificate of High Specialty: Data Science</div>
+      <a href="https://www.tec.mx/en/certificate-programs" target="_blank" rel="noopener" class="cert-verify-link">↗ View credential</a>
       <div class="cert-desc">Intensive ITESM program covering statistical modeling, machine learning, feature engineering, and applied data science for business decision-making.</div>
     </div>
 
@@ -781,8 +710,54 @@
   </div>
 </section>
 
-<!-- PROJECTS -->
-<section id="projects">
+<!-- EDUCATION -->
+<section id="education">
+  <div class="section-label">Education</div>
+  <div class="edu-list">
+
+    <div class="edu-item reveal">
+      <div class="edu-meta">
+        <div class="edu-period">Aug 2025</div>
+        <div class="edu-school">ITESM · Monterrey, MX</div>
+      </div>
+      <div>
+        <div class="edu-degree">M.S. in Applied Artificial Intelligence</div>
+        <div class="edu-concentration">// Concentration: Business Intelligence</div>
+        <div class="edu-detail">
+          Graduate program at the intersection of AI, data engineering, and digital strategy. Coursework spanned a deliberately broad range — from core ML and NLP to IoT systems, UX design, fintech, and corporate performance management — reflecting the program's emphasis on applying AI across real business domains.
+        </div>
+        <div class="edu-detail" style="margin-top:0.6rem;">
+          <strong style="color:var(--text)">Capstone:</strong> S&amp;P 500 Financial Sentiment Analysis — metadata-enriched RAG pipeline using FAISS vector stores, sentence-transformer embeddings, and GPT-4o-mini. Outperformed text-only retrieval in grounding and response specificity.
+        </div>
+        <div class="edu-tags" style="margin-top:1rem;">
+          <span class="tag tag-ai">ML / AI</span><span class="tag tag-ai">NLP</span><span class="tag tag-ai">RAG</span><span class="tag tag-ai">IoT</span><span class="tag">UX Design</span><span class="tag">Fintech</span><span class="tag">Data Science</span><span class="tag">Digital Strategy</span><span class="tag">Software QA</span><span class="tag">Digital Transformation</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="edu-item reveal">
+      <div class="edu-meta">
+        <div class="edu-period">Jul 2020</div>
+        <div class="edu-school">Tecmilenio · Monterrey, MX</div>
+      </div>
+      <div>
+        <div class="edu-degree">B.S. in Industrial and Systems Engineering</div>
+        <div class="edu-concentration">// Certificates: Supply Chain &amp; Logistics · Manufacturing Systems</div>
+        <div class="edu-detail">
+          Engineering foundation covering operations research, process optimization, systems design, and quantitative methods — directly applied to supply chain analytics and data-driven operations throughout my career.
+        </div>
+        <div class="edu-tags">
+          <span class="tag">Operations Research</span><span class="tag">Process Optimization</span><span class="tag">Supply Chain</span><span class="tag">Systems Design</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- PROJECTS (hidden) -->
+<section id="projects" style="display:none">
   <div class="section-label">Projects</div>
   <div class="projects-grid">
     <div class="project-card feat reveal">
@@ -829,14 +804,14 @@
     <h2>Let's build something<br><span>together.</span></h2>
     <p>Got a data or analytics challenge? I love talking shop — BI architecture, ETL design, AI integration. Whether it's a role or a cool project, I'm always open to a conversation.</p>
     <div class="contact-links">
-      <a href="/cdn-cgi/l/email-protection#49263a3f28252d263a28272a212c333b2433092e24282025672a2624" class="contact-link">✉ <span class="__cf_email__" data-cfemail="83ecf0f5e2efe7ecf0e2ede0ebe6f9f1eef9c3e4eee2eaefade0ecee">[email&#160;protected]</span></a>
+      <a href="mailto:osvaldosanchezrmz@gmail.com" class="contact-link">✉ osvaldosanchezrmz@gmail.com</a>
       <a href="https://linkedin.com/in/osvaldo-sanchez-ramirez" class="contact-link" target="_blank">in LinkedIn</a>
     </div>
   </div>
 </section>
 
 <footer>
-  <p>© 2025 Osvaldo Sánchez Ramírez — Data Analytics Engineer</p>
+  <p>© 2026 Osvaldo Sánchez Ramírez — Data Analytics Engineer</p>
   <div style="display:flex;align-items:center;gap:1.5rem;">
     <div class="status">
       <div class="status-dot"></div>
@@ -846,7 +821,7 @@
   </div>
 </footer>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><!-- SAW GAME OVERLAY -->
+<!-- SAW GAME OVERLAY -->
 <div id="saw-overlay">
   <div class="saw-scanlines"></div>
   <div class="saw-noise"></div>
@@ -889,7 +864,7 @@
       <div class="ending-sub" id="ending-sub"></div>
       <div class="ending-score" id="ending-score"></div>
       <div style="display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;margin-top:0.5rem;">
-        <a href="/cdn-cgi/l/email-protection#254a56534449414a56444b464d405f57485f654248444c490b464a48" class="ending-cta cta-contact" id="ending-cta">✉ Contact Osvaldo</a>
+        <a href="mailto:osvaldosanchezrmz@gmail.com" class="ending-cta cta-contact" id="ending-cta">✉ Contact Osvaldo</a>
         <button class="ending-cta cta-retry" id="saw-retry">↺ Play again</button>
       </div>
       <button class="saw-exit-btn" id="saw-exit-ending" style="margin-top:1rem;">[ exit the game ]</button>
@@ -898,47 +873,9 @@
   </div>
 </div>
 
-<!-- CHAT WIDGET -->
-<button id="chat-btn" aria-label="Chat with Osvaldo's portfolio">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-  </svg>
-</button>
 
-<div id="chat-window" role="dialog" aria-label="Chat with Osvaldo's AI">
-  <div class="chat-header">
-    <div class="chat-header-left">
-      <div class="chat-avatar">🤖</div>
-      <div class="chat-header-info">
-        <div class="chat-header-name">Ask Osvaldo's AI</div>
-        <div class="chat-header-sub"><span class="chat-online-dot"></span> online — powered by Claude</div>
-      </div>
-    </div>
-    <button class="chat-close" id="chat-close">✕</button>
-  </div>
-  <div class="chat-messages" id="chat-messages">
-    <div class="msg bot">
-      <div class="msg-bubble">Hey! I'm Osvaldo's AI assistant. Ask me anything about his background, skills, certifications, or projects. 👋</div>
-      <div class="msg-time">just now</div>
-    </div>
-  </div>
-  <div class="chat-suggestions" id="chat-suggestions">
-    <button class="suggestion-btn">What tools is he certified in?</button>
-    <button class="suggestion-btn">Tell me about his AI work</button>
-    <button class="suggestion-btn">What's his biggest impact?</button>
-    <button class="suggestion-btn">Is he open to work?</button>
-  </div>
-  <div class="chat-input-row">
-    <input type="text" id="chat-input" placeholder="Ask anything about Osvaldo..." autocomplete="off" />
-    <button id="chat-send">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-      </svg>
-    </button>
-  </div>
-</div>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+<script>
 // ── SQL LOADER ────────────────────────────────────────────────
 (function() {
   const loader = document.getElementById('sql-loader');
@@ -949,11 +886,11 @@
     [0,    '<span class="sql-c-muted">-- portfolio_db v2.5 · connecting...</span>'],
     [400,  ''],
     [600,  '<span class="sql-c-kw">SELECT</span> <span class="sql-c-white">*</span>'],
-    [300,  '<span class="sql-c-kw">FROM</span>   <span class="sql-c-fn">candidates</span>'],
-    [300,  '<span class="sql-c-kw">WHERE</span>  <span class="sql-c-fn">name</span>         <span class="sql-c-white">= </span><span class="sql-c-val">\'Osvaldo Sanchez\'</span>'],
-    [250,  '  <span class="sql-c-kw">AND</span>  <span class="sql-c-fn">open_to_work</span>  <span class="sql-c-white">= </span><span class="sql-c-val">TRUE</span>'],
-    [250,  '  <span class="sql-c-kw">AND</span>  <span class="sql-c-fn">certifications</span> <span class="sql-c-white">&gt;= </span><span class="sql-c-num">6</span>'],
-    [250,  '  <span class="sql-c-kw">AND</span>  <span class="sql-c-fn">ms_degree</span>     <span class="sql-c-white">= </span><span class="sql-c-val">\'Applied AI\'</span><span class="sql-c-white">;</span>'],
+    [300,  '<span class="sql-c-kw">FROM</span>   <span class="sql-c-fn">engineers</span>'],
+    [300,  '<span class="sql-c-kw">WHERE</span>  <span class="sql-c-fn">name</span>            <span class="sql-c-white">= </span><span class="sql-c-val">\'Osvaldo Sanchez\'</span>'],
+    [250,  '  <span class="sql-c-kw">AND</span>  <span class="sql-c-fn">certifications</span>  <span class="sql-c-white">&gt;= </span><span class="sql-c-num">6</span>'],
+    [250,  '  <span class="sql-c-kw">AND</span>  <span class="sql-c-fn">ms_degree</span>       <span class="sql-c-white">= </span><span class="sql-c-val">\'Applied AI\'</span>'],
+    [250,  '  <span class="sql-c-kw">AND</span>  <span class="sql-c-fn">years_experience</span> <span class="sql-c-white">&gt;= </span><span class="sql-c-num">5</span><span class="sql-c-white">;</span>'],
     [500,  ''],
     [200,  '<span class="sql-c-dim">Running query</span><span class="sql-c-muted">.........................</span><span class="sql-c-ok"> ✓</span>'],
     [600,  '<span class="sql-c-ok">→ 1 row returned.</span>'],
@@ -1090,7 +1027,7 @@
   document.addEventListener('mousemove', e => { ship.tx = e.clientX; ship.ty = e.clientY; });
   document.addEventListener('click', e => {
     if (!heroVisible) return;
-    if (e.target.closest('a,button,input,#saw-overlay,#chat-window,#sql-loader')) return;
+    if (e.target.closest('a,button,input,#saw-overlay,#sql-loader')) return;
     shoot();
   });
 
@@ -1689,150 +1626,6 @@ function showEnding() {
   } else {
     ctaEl.style.display = 'none';
   }
-}
-
-// ── CHAT WIDGET ──────────────────────────────────────────────
-const OSVALDO_CONTEXT = `
-You are an AI assistant embedded in Osvaldo Sánchez Ramírez's personal portfolio website.
-Your job is to answer questions about Osvaldo in a friendly, concise, and professional way.
-Keep responses short (2-4 sentences max unless detail is truly needed). Be conversational and enthusiastic about his work.
-Never make up information. If something isn't covered here, invite them to reach out directly.
-
-ABOUT OSVALDO:
-- Full name: Osvaldo Sánchez Ramírez
-- Location: Guadalajara, Jalisco, Mexico
-- Email: osvaldosanchezrmz@gmail.com
-- LinkedIn: linkedin.com/in/osvaldo-sanchez-ramirez
-- Open to new opportunities: YES
-
-EDUCATION:
-- M.S. in Applied Artificial Intelligence (BI concentration) — ITESM, completed 2025
-- B.S. in Industrial and Systems Engineering — Universidad Tecmilenio, 2020
-
-CERTIFICATIONS (6 total):
-1. Tableau Certified Data Analyst — Tableau
-2. Alteryx Designer Advanced Certification — Alteryx
-3. Snowflake Data Warehouse Hands-On Essentials — Snowflake
-4. Data Analysis Using Python — IBM
-5. SQL and Relational Databases 101 — IBM
-6. Certificate of High Specialty in Data Science — ITESM
-
-TECHNICAL SKILLS:
-- ETL & Pipelines: Alteryx, SQL, Python, Power Automate, REST APIs
-- BI & Visualization: Power BI, Tableau, DAX, KPI Frameworks
-- Cloud & Warehousing: Snowflake, SQL Server, Data Modeling
-- AI & ML: RAG Pipelines, NLP, FAISS, Sentence Transformers, Scikit-learn, GPT-4o, Prompt Engineering
-
-EXPERIENCE:
-1. JB Poindexter & Co. — Sr. Supply Chain Analyst AI & Analytics (Jan 2025–Present, Houston TX)
-   - Transformer embeddings + semantic clustering → 20% data accuracy improvement
-   - GenAI enterprise deployments with governance frameworks
-   - ~40 hrs/month manual work eliminated via Python automation
-   - Power BI + Snowflake dashboards → 50% faster executive reporting
-   - SQL/Python analytics → 25% lead time reduction
-
-2. Tata Consultancy Services / GE Healthcare — Alteryx Developer (Dec 2023–Jan 2025, GDL MX)
-   - ML attrition model → 18% better workforce planning accuracy (50K+ employee org)
-   - Alteryx automation → 85% manual effort eliminated
-   - ETL re-architecture → 70% pipeline runtime cut
-   - API-integrated Tableau dashboards → eliminated 3-day reporting lag
-
-3. Honeywell — Sr. Data Integration & Analytics Specialist (Aug–Dec 2023, Monterrey MX) [PROMOTED]
-   - SQDIC dashboard from 12+ sources → 95% fewer inconsistencies
-   - Snowflake automation → $60K annual savings
-   - Vendor scorecard 200+ suppliers → 30% compliance increase
-
-4. Honeywell — ISC Analytics Specialist (Oct 2021–Aug 2023, Monterrey MX)
-   - Tableau and Power BI dashboards for supply chain operations
-   - Standardized ETL data models, drove BI adoption
-
-FEATURED PROJECT: S&P 500 Financial RAG Pipeline (ITESM Capstone 2025) — FAISS + sentence-transformer embeddings + GPT-4o-mini generating investment signals from financial news. Metadata-enriched retrieval outperformed text-only context.
-
-LANGUAGES: Spanish (native), English (full professional proficiency)
-`;
-
-const chatBtn = document.getElementById('chat-btn');
-const chatWindow = document.getElementById('chat-window');
-const chatClose = document.getElementById('chat-close');
-const chatMessages = document.getElementById('chat-messages');
-const chatInput = document.getElementById('chat-input');
-const chatSend = document.getElementById('chat-send');
-const chatSuggestions = document.getElementById('chat-suggestions');
-let chatHistory = [];
-let isTyping = false;
-
-chatBtn.addEventListener('click', () => {
-  chatWindow.classList.toggle('open');
-  if (chatWindow.classList.contains('open')) chatInput.focus();
-});
-chatClose.addEventListener('click', () => chatWindow.classList.remove('open'));
-
-chatSuggestions.querySelectorAll('.suggestion-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    sendMessage(btn.textContent);
-    chatSuggestions.style.display = 'none';
-  });
-});
-
-chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(chatInput.value); } });
-chatSend.addEventListener('click', () => sendMessage(chatInput.value));
-
-function getTime() {
-  return new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-}
-
-function appendMessage(role, text) {
-  const div = document.createElement('div');
-  div.className = 'msg ' + role;
-  div.innerHTML = '<div class="msg-bubble">' + text + '</div><div class="msg-time">' + getTime() + '</div>';
-  chatMessages.appendChild(div);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-
-function showTyping() {
-  const div = document.createElement('div');
-  div.className = 'msg bot'; div.id = 'typing-msg';
-  div.innerHTML = '<div class="msg-bubble"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
-  chatMessages.appendChild(div);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-
-function removeTyping() {
-  const t = document.getElementById('typing-msg');
-  if (t) t.remove();
-}
-
-async function sendMessage(text) {
-  text = text.trim();
-  if (!text || isTyping) return;
-  chatInput.value = '';
-  chatSend.disabled = true;
-  isTyping = true;
-  appendMessage('user', text);
-  chatHistory.push({ role: 'user', content: text });
-  showTyping();
-  try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        system: OSVALDO_CONTEXT,
-        messages: chatHistory
-      })
-    });
-    const data = await response.json();
-    const reply = (data.content && data.content[0] && data.content[0].text) || "I'm having trouble connecting right now. Reach Osvaldo directly at osvaldosanchezrmz@gmail.com!";
-    removeTyping();
-    appendMessage('bot', reply);
-    chatHistory.push({ role: 'assistant', content: reply });
-  } catch (err) {
-    removeTyping();
-    appendMessage('bot', "Connection issue! You can reach Osvaldo at osvaldosanchezrmz@gmail.com 📩");
-  }
-  chatSend.disabled = false;
-  isTyping = false;
 }
 </script>
 </body>
