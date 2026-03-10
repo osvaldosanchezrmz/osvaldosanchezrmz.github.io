@@ -1,0 +1,1839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Osvaldo Sánchez — Data Analytics Engineer</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050810;
+    --bg2: #090d1a;
+    --accent: #00f5c4;
+    --accent2: #0066ff;
+    --accent3: #ff3d6b;
+    --accent4: #a855f7;
+    --text: #c8d4e8;
+    --muted: #4a5568;
+    --grid: rgba(0,245,196,0.04);
+    --card: rgba(9,13,26,0.8);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); overflow-x: hidden; cursor: none; }
+
+  /* ── SQL LOADER ── */
+  #sql-loader {
+    position: fixed; inset: 0; z-index: 99999;
+    background: #000;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: clamp(2rem, 8vw, 6rem);
+    transition: opacity 0.6s ease;
+    cursor: none;
+  }
+  #sql-loader.fade-out { opacity: 0; pointer-events: none; }
+  .sql-lines {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: clamp(0.75rem, 1.8vw, 0.95rem);
+    line-height: 2;
+    max-width: 620px;
+  }
+  .sql-line { display: block; white-space: pre; opacity: 0; transform: translateY(4px); transition: opacity 0.15s, transform 0.15s; }
+  .sql-line.show { opacity: 1; transform: translateY(0); }
+  .sql-c-muted  { color: #2a3a2a; }
+  .sql-c-kw     { color: #569cd6; }
+  .sql-c-val    { color: #ce9178; }
+  .sql-c-fn     { color: var(--accent); }
+  .sql-c-ok     { color: #4ec94e; }
+  .sql-c-dim    { color: #3a4a3a; }
+  .sql-c-white  { color: #cdd6e0; }
+  .sql-c-accent { color: var(--accent); }
+  .sql-c-red    { color: #f44747; }
+  .sql-c-num    { color: #b5cea8; }
+  .sql-bar-wrap { display: inline-flex; align-items: center; gap: 0.6rem; }
+  .sql-bar {
+    display: inline-block; height: 0.85em; width: 0;
+    background: var(--accent); vertical-align: middle;
+    transition: width 0.8s ease; max-width: 120px;
+  }
+  .sql-bar-pct { color: var(--accent); min-width: 3ch; display: inline-block; }
+  .sql-cursor {
+    display: inline-block; width: 0.55em; height: 1em;
+    background: var(--accent); vertical-align: text-bottom;
+    animation: blink-cursor 0.8s step-end infinite;
+    margin-left: 1px;
+  }
+  @keyframes blink-cursor { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+  .sql-skip {
+    position: fixed; bottom: 2rem; right: 2rem;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.65rem;
+    color: #2a3a2a; letter-spacing: 0.1em; text-transform: uppercase;
+    transition: color 0.3s; cursor: none;
+    background: none; border: none; padding: 0;
+  }
+  #sql-loader:hover .sql-skip { color: #3d5066; }
+
+  body.hero-ready .hero-tag,
+  body.hero-ready .hero-name,
+  body.hero-ready .hero-role,
+  body.hero-ready .hero-cta,
+  body.hero-ready .hero-stats { animation-play-state: running; }
+
+  .cursor { position: fixed; width: 10px; height: 10px; background: var(--accent); border-radius: 50%; pointer-events: none; z-index: 9999; mix-blend-mode: screen; transition: transform 0.15s ease, opacity 0.6s ease; }
+  .cursor-ring { position: fixed; width: 36px; height: 36px; border: 1px solid var(--accent); border-radius: 50%; pointer-events: none; z-index: 9998; transition: transform 0.15s ease, opacity 0.7s ease, left 0.0s, top 0.0s; opacity: 0; }
+
+  body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 60px 60px; z-index: 0; pointer-events: none; }
+  #canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; opacity: 0.5; }
+  #game-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; transition: opacity 0.7s ease; }
+
+  /* SCORE HUD */
+  #game-hud {
+    position: fixed; top: 5rem; right: 1.5rem; z-index: 1;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.65rem;
+    color: rgba(0,245,196,0.25); letter-spacing: 0.1em;
+    pointer-events: none; line-height: 1.8; text-align: right;
+    transition: color 0.3s;
+  }
+  #game-hud.flash { color: rgba(0,245,196,0.7); }
+  #game-hud .hud-line { display: block; }
+  #kill-label { color: rgba(0,245,196,0.15); font-size: 0.58rem; text-transform: uppercase; }
+  #kill-count { color: rgba(0,245,196,0.35); font-size: 0.9rem; font-weight: 700; }
+
+  /* KILL TOAST */
+  .kill-toast {
+    position: fixed; z-index: 70; pointer-events: none;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    animation: toast-up 1.1s ease forwards;
+    text-shadow: 0 0 10px currentColor;
+  }
+  @keyframes toast-up {
+    0%   { opacity: 0; transform: translateY(0) scale(0.8); }
+    15%  { opacity: 1; transform: translateY(-6px) scale(1.05); }
+    70%  { opacity: 1; transform: translateY(-22px) scale(1); }
+    100% { opacity: 0; transform: translateY(-36px) scale(0.9); }
+  }
+
+  /* NAV */
+  nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 1.4rem 4rem; backdrop-filter: blur(16px); border-bottom: 1px solid rgba(0,245,196,0.08); background: rgba(5,8,16,0.7); }
+  .nav-logo { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: var(--accent); letter-spacing: 0.05em; }
+  .nav-logo span { color: var(--muted); }
+  .nav-links { display: flex; gap: 2.5rem; list-style: none; }
+  .nav-links a { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--muted); text-decoration: none; letter-spacing: 0.1em; text-transform: uppercase; transition: color 0.2s; position: relative; }
+  .nav-links a::after { content: ''; position: absolute; bottom: -4px; left: 0; width: 0; height: 1px; background: var(--accent); transition: width 0.3s ease; }
+  .nav-links a:hover { color: var(--accent); }
+  .nav-links a:hover::after { width: 100%; }
+  section { position: relative; z-index: 1; }
+
+  /* HERO */
+  #hero { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; padding: 0 4rem; padding-top: 6rem; }
+  .hero-tag { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--accent); letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.8rem; opacity: 0; animation: fadeUp 1s 0.1s forwards; animation-play-state: paused; }
+  .hero-tag::before { content: ''; display: block; width: 40px; height: 1px; background: var(--accent); }
+  .hero-name { font-size: clamp(3rem, 7.5vw, 6.5rem); font-weight: 800; line-height: 0.95; letter-spacing: -0.03em; margin-bottom: 1rem; opacity: 0; animation: fadeUp 1s 0.3s forwards; animation-play-state: paused; }
+  .hero-name .line2 { color: var(--accent); }
+  .hero-role { font-family: 'JetBrains Mono', monospace; font-size: clamp(0.9rem, 2vw, 1.1rem); color: var(--muted); margin-bottom: 3rem; opacity: 0; animation: fadeUp 1s 0.55s forwards; animation-play-state: paused; }
+  .hero-role .typed { color: var(--text); }
+  .hero-cta { display: flex; gap: 1.5rem; flex-wrap: wrap; opacity: 0; animation: fadeUp 1s 0.8s forwards; animation-play-state: paused; }
+  .btn-primary { padding: 0.9rem 2.2rem; background: var(--accent); color: var(--bg); font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; text-decoration: none; cursor: none; clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px)); transition: all 0.2s; position: relative; overflow: hidden; }
+  .btn-primary::after { content: ''; position: absolute; inset: 0; background: rgba(255,255,255,0.15); transform: translateX(-100%); transition: transform 0.3s ease; }
+  .btn-primary:hover::after { transform: translateX(0); }
+  .btn-ghost { padding: 0.9rem 2.2rem; border: 1px solid rgba(0,245,196,0.3); color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; text-decoration: none; cursor: none; clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px)); transition: all 0.2s; }
+  .btn-ghost:hover { background: rgba(0,245,196,0.08); border-color: var(--accent); }
+  .hero-stats { position: absolute; right: 4rem; bottom: 4rem; display: flex; gap: 3rem; opacity: 0; animation: fadeUp 1s 1.05s forwards; animation-play-state: paused; }
+  .stat { text-align: right; }
+  .stat-num { font-size: 2.2rem; font-weight: 800; color: var(--accent); line-height: 1; }
+  .stat-label { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+
+  /* MARQUEE */
+  .marquee-wrap { border-top: 1px solid rgba(0,245,196,0.08); border-bottom: 1px solid rgba(0,245,196,0.08); overflow: hidden; padding: 1rem 0; background: rgba(0,245,196,0.02); }
+  .marquee { display: flex; gap: 3rem; width: max-content; animation: marquee 35s linear infinite; white-space: nowrap; }
+  .marquee-item { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 0.5rem; }
+  .marquee-item::before { content: '◆'; color: var(--accent); font-size: 0.5rem; }
+
+  /* SHARED */
+  #about, #skills, #certs, #experience, #projects, #contact { padding: 6rem 4rem; }
+  #about { padding-top: 8rem; }
+  #contact { padding-top: 8rem; text-align: center; }
+
+  .section-label { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--accent); letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.8rem; }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(0,245,196,0.3), transparent); max-width: 120px; }
+
+  /* ABOUT */
+  .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5rem; align-items: start; margin-top: 3rem; }
+  .about-text h2 { font-size: clamp(2rem, 4vw, 3.2rem); font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; margin-bottom: 1.5rem; }
+  .about-text h2 em { color: var(--accent); font-style: normal; }
+  .about-text p { color: var(--muted); line-height: 1.8; font-size: 1rem; margin-bottom: 1rem; }
+  .ai-callout { margin-top: 1.5rem; padding: 1.2rem 1.4rem; background: rgba(168,85,247,0.06); border: 1px solid rgba(168,85,247,0.18); border-left: 3px solid var(--accent4); }
+  .ai-callout-label { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: var(--accent4); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 0.5rem; }
+  .ai-callout p { color: var(--muted); font-size: 0.88rem; line-height: 1.7; margin: 0; }
+  .ai-callout p strong { color: var(--accent4); font-weight: 600; }
+
+  .terminal-block { background: var(--bg2); border: 1px solid rgba(0,245,196,0.12); border-radius: 2px; overflow: hidden; box-shadow: 0 0 60px rgba(0,245,196,0.04); }
+  .terminal-header { padding: 0.75rem 1rem; border-bottom: 1px solid rgba(0,245,196,0.08); display: flex; align-items: center; gap: 0.5rem; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-r { background: #ff5f57; } .dot-y { background: #febc2e; } .dot-g { background: #28c840; }
+  .terminal-title { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--muted); margin-left: 0.5rem; letter-spacing: 0.05em; }
+  .terminal-body { padding: 1.5rem; font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; line-height: 1.9; }
+  .t-green { color: #28c840; } .t-blue { color: var(--accent2); } .t-cyan { color: var(--accent); }
+  .t-pink { color: var(--accent3); } .t-purple { color: var(--accent4); }
+  .t-white { color: #e2e8f0; } .t-string { color: #f4a261; } .t-comment { color: #3d5066; }
+
+  /* SKILLS */
+  .skills-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2rem; margin-top: 2.5rem; }
+  .skill-card { background: var(--card); border: 1px solid rgba(0,245,196,0.08); padding: 1.6rem; position: relative; overflow: hidden; transition: all 0.3s ease; cursor: none; }
+  .skill-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--accent2), var(--accent)); transform: scaleX(0); transform-origin: left; transition: transform 0.4s ease; }
+  .skill-card:hover { border-color: rgba(0,245,196,0.22); transform: translateY(-4px); }
+  .skill-card:hover::before { transform: scaleX(1); }
+  .skill-icon { font-size: 1.6rem; margin-bottom: 0.8rem; display: block; }
+  .skill-name { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.4rem; color: #e2e8f0; }
+  .skill-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.9rem; }
+  .tag { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: var(--accent); background: rgba(0,245,196,0.07); border: 1px solid rgba(0,245,196,0.15); padding: 0.18rem 0.55rem; letter-spacing: 0.04em; }
+  .tag-blue { color: var(--accent2); background: rgba(0,102,255,0.07); border-color: rgba(0,102,255,0.2); }
+  .tag-ai { color: var(--accent4); background: rgba(168,85,247,0.07); border-color: rgba(168,85,247,0.2); }
+
+  /* CERTIFICATIONS — main feature */
+  #certs { background: rgba(0,245,196,0.015); border-top: 1px solid rgba(0,245,196,0.06); border-bottom: 1px solid rgba(0,245,196,0.06); }
+  .certs-intro { margin-top: 0.5rem; margin-bottom: 2.5rem; color: var(--muted); font-size: 0.95rem; max-width: 55ch; line-height: 1.7; }
+  .certs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; }
+  .cert-card { background: var(--bg2); border: 1px solid rgba(255,255,255,0.06); padding: 1.6rem 1.8rem; position: relative; overflow: hidden; transition: all 0.3s ease; cursor: none; display: flex; flex-direction: column; gap: 0.8rem; }
+  .cert-card::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; transform: scaleX(0); transform-origin: left; transition: transform 0.4s ease; }
+  .cert-card:hover { border-color: rgba(0,245,196,0.18); transform: translateY(-3px); }
+  .cert-card:hover::after { transform: scaleX(1); }
+  .cert-card.green::after { background: var(--accent); }
+  .cert-card.blue::after { background: var(--accent2); }
+  .cert-card.orange::after { background: #f4a261; }
+  .cert-card.purple::after { background: var(--accent4); }
+  .cert-issuer-row { display: flex; align-items: center; justify-content: space-between; }
+  .cert-logo { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.2rem 0.6rem; border: 1px solid; }
+  .cert-logo.green { color: var(--accent); border-color: rgba(0,245,196,0.3); background: rgba(0,245,196,0.05); }
+  .cert-logo.blue { color: var(--accent2); border-color: rgba(0,102,255,0.3); background: rgba(0,102,255,0.05); }
+  .cert-logo.orange { color: #f4a261; border-color: rgba(244,162,97,0.3); background: rgba(244,162,97,0.05); }
+  .cert-logo.purple { color: var(--accent4); border-color: rgba(168,85,247,0.3); background: rgba(168,85,247,0.05); }
+  .cert-year { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: var(--muted); }
+  .cert-name { font-size: 1rem; font-weight: 700; color: #e2e8f0; line-height: 1.3; }
+  .cert-desc { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--muted); line-height: 1.6; }
+
+  /* EXPERIENCE */
+  .exp-list { display: flex; flex-direction: column; margin-top: 3rem; }
+  .exp-item { display: grid; grid-template-columns: 200px 1fr; gap: 3rem; padding: 2.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.04); position: relative; }
+  .exp-item:last-child { border-bottom: none; }
+  .exp-meta { padding-top: 0.3rem; }
+  .exp-period { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--accent); letter-spacing: 0.08em; margin-bottom: 0.4rem; }
+  .exp-company { font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 0.15rem; }
+  .exp-location { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: var(--muted); opacity: 0.7; }
+  .exp-role { font-size: 1.2rem; font-weight: 700; color: #e2e8f0; margin-bottom: 0.8rem; line-height: 1.3; }
+  .exp-bullets { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+  .exp-bullets li { font-size: 0.87rem; color: var(--muted); line-height: 1.65; padding-left: 1.2rem; position: relative; }
+  .exp-bullets li::before { content: '→'; position: absolute; left: 0; color: var(--accent); font-size: 0.7rem; top: 0.05rem; }
+  .exp-bullets li strong { color: var(--text); font-weight: 600; }
+  .exp-badge { display: inline-flex; align-items: center; font-family: 'JetBrains Mono', monospace; font-size: 0.58rem; padding: 0.1rem 0.45rem; margin-left: 0.4rem; vertical-align: middle; letter-spacing: 0.08em; text-transform: uppercase; }
+  .badge-ai { color: var(--accent4); background: rgba(168,85,247,0.08); border: 1px solid rgba(168,85,247,0.22); }
+  .badge-ml { color: #febc2e; background: rgba(254,188,46,0.07); border: 1px solid rgba(254,188,46,0.22); }
+
+  /* PROJECTS */
+  .projects-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-top: 3rem; }
+  .project-card { background: var(--card); border: 1px solid rgba(255,255,255,0.05); padding: 2rem; position: relative; overflow: hidden; transition: all 0.3s ease; cursor: none; display: flex; flex-direction: column; }
+  .project-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; transform: scaleX(0); transform-origin: left; transition: transform 0.4s ease; }
+  .project-card.feat::after { background: linear-gradient(90deg, var(--accent4), var(--accent2)); }
+  .project-card.soon::after { background: var(--muted); }
+  .project-card:hover { border-color: rgba(0,245,196,0.15); transform: translateY(-4px); }
+  .project-card:hover::after { transform: scaleX(1); }
+  .project-status { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .status-badge { padding: 0.15rem 0.5rem; font-size: 0.6rem; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.1em; text-transform: uppercase; }
+  .badge-done { background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.3); color: var(--accent4); }
+  .badge-wip { background: rgba(74,85,104,0.2); border: 1px solid rgba(74,85,104,0.4); color: var(--muted); }
+  .project-title { font-size: 1.1rem; font-weight: 700; color: #e2e8f0; margin-bottom: 0.6rem; line-height: 1.3; }
+  .project-desc { font-size: 0.84rem; color: var(--muted); line-height: 1.75; margin-bottom: 1.2rem; flex: 1; }
+  .project-desc strong { color: var(--text); font-weight: 600; }
+  .project-stack { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 1.2rem; }
+  .project-links { display: flex; gap: 0.8rem; }
+  .link-btn { font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; color: var(--muted); text-decoration: none; letter-spacing: 0.08em; padding: 0.4rem 0.8rem; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s; cursor: none; }
+  .link-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .link-btn.disabled { opacity: 0.3; pointer-events: none; }
+
+  /* CONTACT */
+  .contact-inner { max-width: 700px; margin: 0 auto; }
+  .contact-inner h2 { font-size: clamp(2.5rem, 5vw, 4rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; margin-bottom: 1.5rem; }
+  .contact-inner h2 span { color: var(--accent); }
+  .contact-inner p { color: var(--muted); font-size: 1rem; line-height: 1.7; margin-bottom: 3rem; }
+  .contact-links { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+  .contact-link { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--accent2); text-decoration: none; letter-spacing: 0.08em; padding: 1rem 2rem; border: 1px solid rgba(0,102,255,0.3); transition: all 0.2s; cursor: none; display: flex; align-items: center; gap: 0.5rem; }
+  .contact-link:hover { background: rgba(0,102,255,0.08); border-color: var(--accent2); }
+
+  footer { padding: 2rem 4rem; border-top: 1px solid rgba(255,255,255,0.04); display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 1; }
+  footer p { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--muted); }
+  .status { display: flex; align-items: center; gap: 0.5rem; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 2s ease infinite; }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.8); } }
+  .reveal { opacity: 0; transform: translateY(30px); transition: all 0.7s ease; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* CHAT WIDGET */
+  #chat-btn {
+    position: fixed; bottom: 2rem; right: 2rem; z-index: 500;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--accent); border: none; cursor: none;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 0 rgba(0,245,196,0.4);
+    animation: chat-pulse 2.5s ease infinite;
+    transition: transform 0.2s;
+  }
+  #chat-btn:hover { transform: scale(1.1); }
+  #chat-btn svg { width: 24px; height: 24px; color: var(--bg); }
+  @keyframes chat-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(0,245,196,0.4); }
+    70% { box-shadow: 0 0 0 14px rgba(0,245,196,0); }
+    100% { box-shadow: 0 0 0 0 rgba(0,245,196,0); }
+  }
+  #chat-window {
+    position: fixed; bottom: 5.5rem; right: 2rem; z-index: 500;
+    width: 360px; max-height: 520px;
+    background: var(--bg2); border: 1px solid rgba(0,245,196,0.18);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,245,196,0.04);
+    display: flex; flex-direction: column;
+    opacity: 0; pointer-events: none; transform: translateY(16px) scale(0.97);
+    transition: all 0.25s ease;
+  }
+  #chat-window.open { opacity: 1; pointer-events: all; transform: translateY(0) scale(1); }
+  .chat-header {
+    padding: 1rem 1.2rem; border-bottom: 1px solid rgba(0,245,196,0.08);
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(0,245,196,0.04);
+  }
+  .chat-header-left { display: flex; align-items: center; gap: 0.7rem; }
+  .chat-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem;
+  }
+  .chat-header-info { line-height: 1.2; }
+  .chat-header-name { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--accent); font-weight: 600; }
+  .chat-header-sub { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: var(--muted); display: flex; align-items: center; gap: 0.3rem; }
+  .chat-online-dot { width: 5px; height: 5px; border-radius: 50%; background: #28c840; display: inline-block; }
+  .chat-close { background: none; border: none; color: var(--muted); cursor: none; font-size: 1.1rem; line-height: 1; transition: color 0.2s; padding: 0.2rem; }
+  .chat-close:hover { color: var(--text); }
+  .chat-messages {
+    flex: 1; overflow-y: auto; padding: 1rem;
+    display: flex; flex-direction: column; gap: 0.8rem;
+    max-height: 340px;
+    scrollbar-width: thin; scrollbar-color: rgba(0,245,196,0.2) transparent;
+  }
+  .chat-messages::-webkit-scrollbar { width: 4px; }
+  .chat-messages::-webkit-scrollbar-thumb { background: rgba(0,245,196,0.2); border-radius: 2px; }
+  .msg { max-width: 88%; display: flex; flex-direction: column; gap: 0.2rem; }
+  .msg.bot { align-self: flex-start; }
+  .msg.user { align-self: flex-end; }
+  .msg-bubble {
+    padding: 0.7rem 0.9rem; font-size: 0.82rem; line-height: 1.6; border-radius: 2px;
+  }
+  .msg.bot .msg-bubble { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); color: var(--text); }
+  .msg.user .msg-bubble { background: rgba(0,245,196,0.12); border: 1px solid rgba(0,245,196,0.2); color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; }
+  .msg-time { font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; color: var(--muted); }
+  .msg.user .msg-time { text-align: right; }
+  .typing-indicator { display: flex; gap: 4px; padding: 0.7rem 0.9rem; align-items: center; }
+  .typing-indicator span { width: 5px; height: 5px; border-radius: 50%; background: var(--muted); animation: typing-bounce 1.2s ease infinite; }
+  .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typing-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-5px); opacity: 1; } }
+  .chat-suggestions { padding: 0.5rem 1rem 0; display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .suggestion-btn {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: var(--muted);
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+    padding: 0.3rem 0.7rem; cursor: none; transition: all 0.2s; text-align: left;
+  }
+  .suggestion-btn:hover { color: var(--accent); border-color: rgba(0,245,196,0.3); background: rgba(0,245,196,0.05); }
+  .chat-input-row {
+    padding: 0.8rem 1rem; border-top: 1px solid rgba(0,245,196,0.08);
+    display: flex; gap: 0.6rem; align-items: center;
+  }
+  #chat-input {
+    flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 0.78rem;
+    padding: 0.6rem 0.8rem; outline: none; transition: border-color 0.2s;
+    cursor: text;
+  }
+  #chat-input::placeholder { color: var(--muted); }
+  #chat-input:focus { border-color: rgba(0,245,196,0.3); }
+  #chat-send {
+    background: var(--accent); border: none; color: var(--bg);
+    width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
+    cursor: none; transition: opacity 0.2s; flex-shrink: 0;
+  }
+  #chat-send:hover { opacity: 0.85; }
+  #chat-send svg { width: 15px; height: 15px; }
+  #chat-send:disabled { opacity: 0.3; }
+
+  @media (max-width: 1100px) { .skills-grid { grid-template-columns: repeat(2, 1fr); } .certs-grid { grid-template-columns: repeat(2, 1fr); } }
+
+  /* ── SAW GAME ── */
+  #saw-trigger:hover { color: #ff3d3d !important; }
+  #saw-overlay {
+    position: fixed; inset: 0; z-index: 10000;
+    background: #000; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.4s;
+    font-family: 'JetBrains Mono', monospace;
+    overflow: hidden;
+  }
+  #saw-overlay.active { opacity: 1; pointer-events: all; }
+  .saw-scanlines {
+    position: absolute; inset: 0; pointer-events: none; z-index: 1;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.18) 2px, rgba(0,0,0,0.18) 4px);
+    animation: scanlines-move 8s linear infinite;
+  }
+  @keyframes scanlines-move { from { background-position: 0 0; } to { background-position: 0 100px; } }
+  .saw-noise {
+    position: absolute; inset: 0; pointer-events: none; z-index: 2; opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  }
+  #saw-content { position: relative; z-index: 10; width: 100%; max-width: 680px; padding: 2rem; text-align: center; }
+
+  /* INTRO SCREEN */
+  #saw-intro { display: flex; flex-direction: column; align-items: center; gap: 2rem; }
+  .saw-puppet {
+    font-size: 5rem; line-height: 1;
+    animation: puppet-glitch 3s ease infinite;
+    filter: drop-shadow(0 0 20px rgba(255,30,30,0.6));
+  }
+  @keyframes puppet-glitch {
+    0%,90%,100% { transform: none; filter: drop-shadow(0 0 20px rgba(255,30,30,0.6)); }
+    91% { transform: translateX(-4px) skewX(-2deg); filter: drop-shadow(0 0 20px rgba(255,30,30,0.6)) hue-rotate(90deg); }
+    92% { transform: translateX(4px) skewX(2deg); }
+    93% { transform: none; }
+    95% { transform: translateX(-2px); filter: drop-shadow(0 0 30px rgba(255,30,30,1)) hue-rotate(180deg); }
+    96% { transform: none; filter: drop-shadow(0 0 20px rgba(255,30,30,0.6)); }
+  }
+  .saw-intro-text {
+    font-size: clamp(1.4rem, 4vw, 2rem); font-weight: 700; color: #cc0000;
+    letter-spacing: 0.05em; line-height: 1.3;
+    text-shadow: 0 0 20px rgba(200,0,0,0.8), 2px 2px 0 #000;
+  }
+  .saw-intro-sub { font-size: 0.8rem; color: #555; letter-spacing: 0.15em; text-transform: uppercase; }
+  .saw-start-btn {
+    margin-top: 0.5rem; padding: 1rem 3rem;
+    background: transparent; border: 1px solid #cc0000; color: #cc0000;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase; cursor: none;
+    transition: all 0.2s; position: relative; overflow: hidden;
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  }
+  .saw-start-btn::before { content: ''; position: absolute; inset: 0; background: #cc0000; transform: scaleX(0); transform-origin: left; transition: transform 0.3s; }
+  .saw-start-btn:hover { color: #000; }
+  .saw-start-btn:hover::before { transform: scaleX(1); }
+  .saw-start-btn span { position: relative; z-index: 1; }
+  .saw-exit-btn { background: none; border: none; color: #333; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; cursor: none; letter-spacing: 0.1em; transition: color 0.2s; margin-top: 0.5rem; }
+  .saw-exit-btn:hover { color: #666; }
+
+  /* QUESTION SCREEN */
+  #saw-question-screen { display: none; flex-direction: column; gap: 1.5rem; }
+  .saw-progress-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
+  .saw-qnum { font-size: 0.65rem; color: #cc0000; letter-spacing: 0.15em; text-transform: uppercase; }
+  .saw-timer-wrap { position: relative; width: 48px; height: 48px; }
+  .saw-timer-svg { transform: rotate(-90deg); }
+  .saw-timer-bg { fill: none; stroke: #1a0000; stroke-width: 3; }
+  .saw-timer-ring { fill: none; stroke: #cc0000; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 125.6; transition: stroke-dashoffset 1s linear, stroke 0.3s; }
+  .saw-timer-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: #cc0000; }
+  .saw-pips { display: flex; gap: 0.4rem; }
+  .saw-pip { width: 8px; height: 8px; border-radius: 50%; background: #1a0000; border: 1px solid #330000; transition: all 0.3s; }
+  .saw-pip.correct { background: #00cc44; border-color: #00cc44; }
+  .saw-pip.wrong { background: #cc0000; border-color: #cc0000; }
+  .saw-question-text {
+    font-size: clamp(1rem, 2.5vw, 1.3rem); color: #ddd; line-height: 1.5;
+    font-weight: 700; letter-spacing: 0.01em;
+  }
+  .saw-trap-label { font-size: 0.6rem; color: #cc0000; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 0.3rem; opacity: 0.7; }
+  .saw-options { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+  .saw-option {
+    padding: 0.9rem 1rem; background: #0a0a0a; border: 1px solid #1f1f1f; color: #888;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; text-align: left;
+    cursor: none; transition: all 0.15s; position: relative; letter-spacing: 0.02em;
+    clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  }
+  .saw-option:hover:not(:disabled) { border-color: #cc0000; color: #fff; background: #110000; }
+  .saw-option.correct { border-color: #00cc44 !important; color: #00cc44 !important; background: #001a08 !important; }
+  .saw-option.wrong { border-color: #cc0000 !important; color: #cc0000 !important; background: #1a0000 !important; }
+  .saw-option.reveal { border-color: #00cc44 !important; color: #444 !important; }
+  .saw-option:disabled { cursor: not-allowed; }
+  .saw-feedback { font-size: 0.78rem; color: #555; min-height: 1.5rem; letter-spacing: 0.03em; line-height: 1.5; text-align: center; }
+  .saw-feedback.good { color: #00cc44; }
+  .saw-feedback.bad { color: #cc0000; }
+
+  /* ENDING SCREEN */
+  #saw-ending { display: none; flex-direction: column; align-items: center; gap: 1.5rem; }
+  .ending-icon { font-size: 4rem; animation: ending-pulse 2s ease infinite; }
+  @keyframes ending-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+  .ending-title { font-size: clamp(1.3rem, 4vw, 2rem); font-weight: 800; letter-spacing: 0.05em; line-height: 1.2; }
+  .ending-title.dead { color: #cc0000; text-shadow: 0 0 20px rgba(200,0,0,0.6); }
+  .ending-title.survive { color: #ff8800; text-shadow: 0 0 20px rgba(255,136,0,0.5); }
+  .ending-title.win { color: #00f5c4; text-shadow: 0 0 20px rgba(0,245,196,0.6); }
+  .ending-sub { font-size: 0.85rem; color: #555; letter-spacing: 0.08em; max-width: 38ch; line-height: 1.7; }
+  .ending-score { font-size: 0.7rem; color: #333; letter-spacing: 0.12em; }
+  .ending-score span { color: #cc0000; }
+  .ending-cta {
+    padding: 0.9rem 2.5rem; font-family: 'JetBrains Mono', monospace; font-size: 0.78rem;
+    letter-spacing: 0.15em; text-transform: uppercase; cursor: none; font-weight: 700;
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+    transition: all 0.2s; text-decoration: none; display: inline-block;
+  }
+  .cta-contact { background: #00f5c4; color: #000; border: none; }
+  .cta-contact:hover { opacity: 0.85; }
+  .cta-retry { background: transparent; border: 1px solid #333; color: #444; }
+  .cta-retry:hover { border-color: #cc0000; color: #cc0000; }
+  .glitch-text { animation: glitch-anim 2s ease infinite; }
+  @keyframes glitch-anim {
+    0%,95%,100% { text-shadow: none; transform: none; }
+    96% { text-shadow: -2px 0 #ff0000, 2px 0 #00ffff; transform: skewX(-1deg); }
+    97% { text-shadow: 2px 0 #ff0000, -2px 0 #00ffff; transform: skewX(1deg); }
+    98% { text-shadow: none; transform: none; }
+  }
+  @media (max-width: 900px) {
+    nav { padding: 1rem 2rem; } .nav-links { display: none; }
+    #about, #skills, #certs, #experience, #projects, #contact { padding-left: 2rem; padding-right: 2rem; }
+    .about-grid { grid-template-columns: 1fr; gap: 3rem; }
+    .exp-item { grid-template-columns: 1fr; gap: 0.5rem; padding: 2rem 0; }
+    .projects-grid { grid-template-columns: 1fr; }
+    .hero-stats { position: static; margin-top: 3rem; justify-content: flex-start; }
+    footer { padding: 2rem; flex-direction: column; gap: 1rem; text-align: center; }
+  }
+  @media (max-width: 600px) { .skills-grid { grid-template-columns: 1fr; } .certs-grid { grid-template-columns: 1fr; } .hero-stats { gap: 2rem; } }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+<canvas id="canvas"></canvas>
+<canvas id="game-canvas"></canvas>
+<div id="game-hud">
+  <span id="kill-label">enemies destroyed</span><br>
+  <span id="kill-count">0</span>
+</div>
+
+<!-- SQL LOADER -->
+<div id="sql-loader">
+  <div class="sql-lines" id="sql-lines"></div>
+  <button class="sql-skip" id="sql-skip">press any key to skip</button>
+</div>
+
+<nav>
+  <div class="nav-logo">osvaldo<span>.dev</span></div>
+  <ul class="nav-links">
+    <li><a href="#about">about</a></li>
+    <li><a href="#skills">skills</a></li>
+    <li><a href="#certs">certifications</a></li>
+    <li><a href="#experience">experience</a></li>
+    <li><a href="#projects">projects</a></li>
+    <li><a href="#contact">contact</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-tag">Data Analytics Engineer · GDL, JAL, MX</div>
+  <h1 class="hero-name">Osvaldo<br><span class="line2">Sánchez.</span></h1>
+  <div class="hero-role">$ <span class="typed" id="typed"></span><span id="blink" style="color:var(--accent)">_</span></div>
+  <div class="hero-cta">
+    <a href="#skills" class="btn-primary">Explore My Stack</a>
+    <a href="#contact" class="btn-ghost">Get in Touch</a>
+  </div>
+  <div class="hero-stats">
+    <div class="stat"><div class="stat-num">5+</div><div class="stat-label">Years exp.</div></div>
+    <div class="stat"><div class="stat-num">6</div><div class="stat-label">Certifications</div></div>
+    <div class="stat"><div class="stat-num">M.S.</div><div class="stat-label">Applied AI</div></div>
+  </div>
+</section>
+
+<!-- MARQUEE -->
+<div class="marquee-wrap">
+  <div class="marquee">
+    <div class="marquee-item">Tableau Certified</div>
+    <div class="marquee-item">Alteryx Advanced</div>
+    <div class="marquee-item">Snowflake</div>
+    <div class="marquee-item">Power BI</div>
+    <div class="marquee-item">Python</div>
+    <div class="marquee-item">SQL</div>
+    <div class="marquee-item">ETL / ELT</div>
+    <div class="marquee-item">RAG Pipelines</div>
+    <div class="marquee-item">NLP & Embeddings</div>
+    <div class="marquee-item">Machine Learning</div>
+    <div class="marquee-item">Data Modeling</div>
+    <div class="marquee-item">Supply Chain Analytics</div>
+    <div class="marquee-item">Tableau Certified</div>
+    <div class="marquee-item">Alteryx Advanced</div>
+    <div class="marquee-item">Snowflake</div>
+    <div class="marquee-item">Power BI</div>
+    <div class="marquee-item">Python</div>
+    <div class="marquee-item">SQL</div>
+    <div class="marquee-item">ETL / ELT</div>
+    <div class="marquee-item">RAG Pipelines</div>
+    <div class="marquee-item">NLP & Embeddings</div>
+    <div class="marquee-item">Machine Learning</div>
+    <div class="marquee-item">Data Modeling</div>
+    <div class="marquee-item">Supply Chain Analytics</div>
+  </div>
+</div>
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="section-label">About</div>
+  <div class="about-grid reveal">
+    <div class="about-text">
+      <h2>Certified expert.<br><em>AI-powered</em> differentiator.</h2>
+      <p>I'm a Data Analytics Engineer with 5+ years building enterprise data solutions — ETL pipelines, BI platforms, and cloud data architectures that run in production at global companies like Honeywell, GE Healthcare, and JB Poindexter.</p>
+      <p>My foundation is deep technical expertise backed by industry-recognized certifications in Tableau, Alteryx, Snowflake, and Data Science. I combine that with hands-on BI delivery and a track record of eliminating manual work at scale.</p>
+      <div class="ai-callout">
+        <div class="ai-callout-label">⚡ AI as a multiplier</div>
+        <p>My M.S. in Applied AI (ITESM, 2025) adds a layer most analytics engineers don't have — <strong>RAG pipelines, transformer embeddings, LLM integration, and predictive modeling</strong> — applied directly to the same enterprise data problems I've been solving for years.</p>
+      </div>
+    </div>
+    <div class="terminal-block">
+      <div class="terminal-header">
+        <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+        <span class="terminal-title">profile.py</span>
+      </div>
+      <div class="terminal-body">
+        <span class="t-comment"># The stack that ships to production</span><br>
+        <span class="t-blue">class</span> <span class="t-cyan">Osvaldo</span>:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="t-blue">def</span> <span class="t-green">__init__</span>(<span class="t-white">self</span>):<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="t-white">self</span>.<span class="t-cyan">location</span> = <span class="t-string">"GDL, JAL, MX 🇲🇽"</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="t-white">self</span>.<span class="t-cyan">certs</span> = <span class="t-green">6</span>  <span class="t-comment"># industry-certified</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="t-white">self</span>.<span class="t-cyan">foundation</span> = [<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="t-string">"Tableau"</span>, <span class="t-string">"Alteryx"</span>, <span class="t-string">"SQL"</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="t-string">"Snowflake"</span>, <span class="t-string">"Power BI"</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="t-white">self</span>.<span class="t-cyan">superpower</span> = <span class="t-purple">"M.S. Applied AI"</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="t-white">self</span>.<span class="t-cyan">open_to_work</span> = <span class="t-pink">True</span><br><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="t-blue">def</span> <span class="t-green">value_add</span>(<span class="t-white">self</span>):<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="t-blue">return</span> <span class="t-string">"Certified + AI-capable"</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SKILLS -->
+<section id="skills">
+  <div class="section-label">Technical Skills</div>
+  <div class="skills-grid">
+    <div class="skill-card reveal">
+      <span class="skill-icon">🔄</span>
+      <div class="skill-name">ETL & Data Pipelines</div>
+      <div class="skill-tags"><span class="tag">Alteryx</span><span class="tag">SQL</span><span class="tag">Python</span><span class="tag">Power Automate</span><span class="tag">REST APIs</span></div>
+    </div>
+    <div class="skill-card reveal">
+      <span class="skill-icon">📊</span>
+      <div class="skill-name">BI & Visualization</div>
+      <div class="skill-tags"><span class="tag-blue tag">Power BI</span><span class="tag-blue tag">Tableau</span><span class="tag-blue tag">DAX</span><span class="tag-blue tag">KPI Frameworks</span></div>
+    </div>
+    <div class="skill-card reveal">
+      <span class="skill-icon">☁️</span>
+      <div class="skill-name">Cloud & Warehousing</div>
+      <div class="skill-tags"><span class="tag">Snowflake</span><span class="tag">SQL Server</span><span class="tag">Data Modeling</span><span class="tag">SAP</span></div>
+    </div>
+    <div class="skill-card reveal">
+      <span class="skill-icon">🤖</span>
+      <div class="skill-name">AI & ML <span style="color:var(--accent4);font-size:0.65rem;font-family:'JetBrains Mono',monospace;margin-left:0.3rem">+ differentiator</span></div>
+      <div class="skill-tags"><span class="tag-ai tag">RAG / LLMs</span><span class="tag-ai tag">NLP</span><span class="tag-ai tag">Embeddings</span><span class="tag-ai tag">Scikit-learn</span><span class="tag-ai tag">FAISS</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- CERTIFICATIONS -->
+<section id="certs">
+  <div class="section-label">Certifications</div>
+  <p class="certs-intro reveal">Industry-recognized credentials that validate my technical depth across the full analytics stack — from data transformation and visualization to cloud warehousing and data science.</p>
+  <div class="certs-grid">
+
+    <div class="cert-card green reveal">
+      <div class="cert-issuer-row">
+        <span class="cert-logo green">Tableau</span>
+        <span class="cert-year">Certified</span>
+      </div>
+      <div class="cert-name">Tableau Certified Data Analyst</div>
+      <div class="cert-desc">Industry-standard certification validating expertise in data visualization, calculated fields, dashboards, and storytelling with Tableau Desktop and Server.</div>
+    </div>
+
+    <div class="cert-card orange reveal">
+      <div class="cert-issuer-row">
+        <span class="cert-logo orange">Alteryx</span>
+        <span class="cert-year">Advanced</span>
+      </div>
+      <div class="cert-name">Alteryx Designer Advanced Certification</div>
+      <div class="cert-desc">Advanced-level certification covering complex ETL workflows, spatial analytics, predictive tools, and enterprise-scale data automation in Alteryx Designer.</div>
+    </div>
+
+    <div class="cert-card blue reveal">
+      <div class="cert-issuer-row">
+        <span class="cert-logo blue">Snowflake</span>
+        <span class="cert-year">Certified</span>
+      </div>
+      <div class="cert-name">Snowflake Data Warehouse — Hands-On Essentials</div>
+      <div class="cert-desc">Practical certification in cloud data warehousing fundamentals: data loading, query optimization, virtual warehouses, and Snowflake architecture.</div>
+    </div>
+
+    <div class="cert-card orange reveal">
+      <div class="cert-issuer-row">
+        <span class="cert-logo orange">IBM</span>
+        <span class="cert-year">Certified</span>
+      </div>
+      <div class="cert-name">Data Analysis Using Python</div>
+      <div class="cert-desc">IBM certification covering data wrangling, analysis with Pandas & NumPy, data visualization, and building regression models in Python.</div>
+    </div>
+
+    <div class="cert-card orange reveal">
+      <div class="cert-issuer-row">
+        <span class="cert-logo orange">IBM</span>
+        <span class="cert-year">Certified</span>
+      </div>
+      <div class="cert-name">SQL and Relational Databases 101</div>
+      <div class="cert-desc">IBM foundational certification covering relational database design, SQL queries, joins, stored procedures, and database management fundamentals.</div>
+    </div>
+
+    <div class="cert-card purple reveal">
+      <div class="cert-issuer-row">
+        <span class="cert-logo purple">ITESM</span>
+        <span class="cert-year">2024</span>
+      </div>
+      <div class="cert-name">Certificate of High Specialty: Data Science</div>
+      <div class="cert-desc">Intensive ITESM program covering statistical modeling, machine learning, feature engineering, and applied data science for business decision-making.</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- EXPERIENCE -->
+<section id="experience">
+  <div class="section-label">Experience</div>
+  <div class="exp-list">
+
+    <div class="exp-item reveal">
+      <div class="exp-meta">
+        <div class="exp-period">Jan 2025 — Present</div>
+        <div class="exp-company">JB Poindexter & Co.</div>
+        <div class="exp-location">Houston, TX</div>
+      </div>
+      <div>
+        <div class="exp-role">Sr. Supply Chain Analyst — AI & Analytics</div>
+        <ul class="exp-bullets">
+          <li>AI spend categorization using <strong>transformer embeddings + semantic clustering</strong> — standardized unstructured procurement data, improved accuracy by 20%. <span class="exp-badge badge-ai">AI</span></li>
+          <li>Evaluated and deployed <strong>GenAI enterprise solutions</strong> — authored governance standards, led cross-functional enablement sessions. <span class="exp-badge badge-ai">GenAI</span></li>
+          <li>Python automation eliminating <strong>~40 hrs/month</strong> of manual processing across Supply Chain and Procurement.</li>
+          <li>Executive Power BI dashboards on Snowflake + live APIs — consolidated 6+ fragmented reports, <strong>50% faster C-suite reporting.</strong></li>
+          <li>SQL/Python analytics surfacing procurement bottlenecks — <strong>reduced lead time by 25%.</strong></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="exp-item reveal">
+      <div class="exp-meta">
+        <div class="exp-period">Dec 2023 — Jan 2025</div>
+        <div class="exp-company">Tata Consultancy Services</div>
+        <div class="exp-location">GE Healthcare · GDL, MX</div>
+      </div>
+      <div>
+        <div class="exp-role">Alteryx Developer / Data Consultant</div>
+        <ul class="exp-bullets">
+          <li>Supervised ML attrition model — <strong>18% improvement in workforce planning accuracy</strong> for a 50K+ employee org. <span class="exp-badge badge-ml">ML</span></li>
+          <li>End-to-end Alteryx automation pipelines — <strong>eliminated 85% of manual effort</strong> with reliable daily refreshes.</li>
+          <li>Re-architected ETL workflows in Alteryx + SQL — <strong>cut pipeline runtime by 70%</strong> at enterprise scale.</li>
+          <li>API-integrated Tableau dashboards with real-time headcount KPIs — <strong>eliminated a 3-day monthly reporting lag.</strong></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="exp-item reveal">
+      <div class="exp-meta">
+        <div class="exp-period">Aug 2023 — Dec 2023</div>
+        <div class="exp-company">Honeywell</div>
+        <div class="exp-location">Monterrey, MX</div>
+        <div style="margin-top:0.6rem;font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:var(--accent);background:rgba(0,245,196,0.06);border:1px solid rgba(0,245,196,0.18);padding:0.2rem 0.5rem;display:inline-block;letter-spacing:0.1em;">↑ PROMOTED</div>
+      </div>
+      <div>
+        <div class="exp-role">Sr. Data Integration & Analytics Specialist</div>
+        <ul class="exp-bullets">
+          <li>SQDIC dashboard consolidating 12+ disconnected sources — <strong>reduced inconsistencies by 95%</strong> and established the org's first standardized KPI framework.</li>
+          <li>Snowflake cloud automation replacing legacy manual extracts — <strong>$60K annual operational savings.</strong></li>
+          <li>Automated vendor scorecard across 200+ suppliers — drove <strong>30% increase in compliance.</strong></li>
+          <li>Unified data architecture across IT, Finance & Supply Chain for 3 regional BUs — <strong>60% faster data reconciliation.</strong></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="exp-item reveal">
+      <div class="exp-meta">
+        <div class="exp-period">Oct 2021 — Aug 2023</div>
+        <div class="exp-company">Honeywell</div>
+        <div class="exp-location">Monterrey, MX</div>
+      </div>
+      <div>
+        <div class="exp-role">ISC Analytics Specialist</div>
+        <ul class="exp-bullets">
+          <li>Designed and deployed Tableau and Power BI dashboards — <strong>streamlined operations and reporting</strong> across supply chain teams.</li>
+          <li>Managed large datasets from cloud and on-prem sources, standardizing ETL data models to <strong>improve system efficiency.</strong></li>
+          <li>Developed IT and analytics solutions, tailoring integrations to business unit needs and <strong>driving adoption of self-serve BI.</strong></li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- PROJECTS -->
+<section id="projects">
+  <div class="section-label">Projects</div>
+  <div class="projects-grid">
+    <div class="project-card feat reveal">
+      <div>
+        <div class="project-status"><span>M.S. Capstone · ITESM 2025</span><span class="status-badge badge-done">Featured</span></div>
+        <div class="project-title">S&P 500 Financial RAG Pipeline</div>
+        <div class="project-desc">
+          Metadata-enriched <strong>RAG pipeline over S&P 500 financial news</strong> — FAISS vector stores, sentence-transformer embeddings, and GPT-4o-mini to generate context-aware investment signals.<br><br>
+          Metadata-enriched retrieval (sector + industry via yfinance) <strong>outperformed text-only context</strong> in grounding and specificity.
+        </div>
+        <div class="project-stack">
+          <span class="tag tag-ai">Python</span><span class="tag tag-ai">RAG</span><span class="tag tag-ai">FAISS</span><span class="tag tag-ai">GPT-4o-mini</span><span class="tag tag-ai">Sentence Transformers</span><span class="tag tag-ai">yfinance</span>
+        </div>
+      </div>
+      <div class="project-links">
+        <a href="#" class="link-btn">↗ GitHub</a>
+        <a href="#" class="link-btn">↗ Paper</a>
+      </div>
+    </div>
+    <div class="project-card soon reveal">
+      <div>
+        <div class="project-status"><span>Personal</span><span class="status-badge badge-wip">Coming soon</span></div>
+        <div class="project-title">Project 2</div>
+        <div class="project-desc">Your next project goes here — academic, personal, or side project. Add details when ready.</div>
+        <div class="project-stack"><span class="tag">TBD</span></div>
+      </div>
+      <div class="project-links"><a href="#" class="link-btn disabled">↗ GitHub</a></div>
+    </div>
+    <div class="project-card soon reveal">
+      <div>
+        <div class="project-status"><span>Personal</span><span class="status-badge badge-wip">Coming soon</span></div>
+        <div class="project-title">Project 3</div>
+        <div class="project-desc">Another spot for future work. Your portfolio grows here over time.</div>
+        <div class="project-stack"><span class="tag">TBD</span></div>
+      </div>
+      <div class="project-links"><a href="#" class="link-btn disabled">↗ GitHub</a></div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="contact-inner reveal">
+    <h2>Let's build something<br><span>together.</span></h2>
+    <p>Got a data or analytics challenge? I love talking shop — BI architecture, ETL design, AI integration. Whether it's a role or a cool project, I'm always open to a conversation.</p>
+    <div class="contact-links">
+      <a href="/cdn-cgi/l/email-protection#49263a3f28252d263a28272a212c333b2433092e24282025672a2624" class="contact-link">✉ <span class="__cf_email__" data-cfemail="83ecf0f5e2efe7ecf0e2ede0ebe6f9f1eef9c3e4eee2eaefade0ecee">[email&#160;protected]</span></a>
+      <a href="https://linkedin.com/in/osvaldo-sanchez-ramirez" class="contact-link" target="_blank">in LinkedIn</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>© 2025 Osvaldo Sánchez Ramírez — Data Analytics Engineer</p>
+  <div style="display:flex;align-items:center;gap:1.5rem;">
+    <div class="status">
+      <div class="status-dot"></div>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--muted)">open to opportunities</span>
+    </div>
+    <button id="saw-trigger" title="I want to play a game..." style="background:none;border:none;cursor:none;font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:#1a1f2e;letter-spacing:0.1em;transition:color 0.3s;padding:0;">⬡ do you dare?</button>
+  </div>
+</footer>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><!-- SAW GAME OVERLAY -->
+<div id="saw-overlay">
+  <div class="saw-scanlines"></div>
+  <div class="saw-noise"></div>
+  <div id="saw-content">
+
+    <!-- INTRO -->
+    <div id="saw-intro">
+      <div class="saw-puppet glitch-text">🤖</div>
+      <div class="saw-intro-text">Hello.<br>I want to play a game.</div>
+      <div class="saw-intro-sub">7 questions. AI & tech culture. No second chances.</div>
+      <button class="saw-start-btn" id="saw-start-btn"><span>▶ Let's play</span></button>
+      <button class="saw-exit-btn" id="saw-exit-intro">[ I'm too scared — exit ]</button>
+    </div>
+
+    <!-- QUESTION -->
+    <div id="saw-question-screen">
+      <div class="saw-progress-row">
+        <div>
+          <div class="saw-qnum" id="saw-qnum">Question 1 / 7</div>
+          <div class="saw-pips" id="saw-pips"></div>
+        </div>
+        <div class="saw-timer-wrap">
+          <svg class="saw-timer-svg" width="48" height="48" viewBox="0 0 48 48">
+            <circle class="saw-timer-bg" cx="24" cy="24" r="20"/>
+            <circle class="saw-timer-ring" id="saw-ring" cx="24" cy="24" r="20"/>
+          </svg>
+          <div class="saw-timer-num" id="saw-timer-num">15</div>
+        </div>
+      </div>
+      <div class="saw-trap-label">⚠ one answer is a trap</div>
+      <div class="saw-question-text" id="saw-q-text"></div>
+      <div class="saw-options" id="saw-options"></div>
+      <div class="saw-feedback" id="saw-feedback"></div>
+    </div>
+
+    <!-- ENDING -->
+    <div id="saw-ending">
+      <div class="ending-icon" id="ending-icon"></div>
+      <div class="ending-title" id="ending-title"></div>
+      <div class="ending-sub" id="ending-sub"></div>
+      <div class="ending-score" id="ending-score"></div>
+      <div style="display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;margin-top:0.5rem;">
+        <a href="/cdn-cgi/l/email-protection#254a56534449414a56444b464d405f57485f654248444c490b464a48" class="ending-cta cta-contact" id="ending-cta">✉ Contact Osvaldo</a>
+        <button class="ending-cta cta-retry" id="saw-retry">↺ Play again</button>
+      </div>
+      <button class="saw-exit-btn" id="saw-exit-ending" style="margin-top:1rem;">[ exit the game ]</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- CHAT WIDGET -->
+<button id="chat-btn" aria-label="Chat with Osvaldo's portfolio">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+  </svg>
+</button>
+
+<div id="chat-window" role="dialog" aria-label="Chat with Osvaldo's AI">
+  <div class="chat-header">
+    <div class="chat-header-left">
+      <div class="chat-avatar">🤖</div>
+      <div class="chat-header-info">
+        <div class="chat-header-name">Ask Osvaldo's AI</div>
+        <div class="chat-header-sub"><span class="chat-online-dot"></span> online — powered by Claude</div>
+      </div>
+    </div>
+    <button class="chat-close" id="chat-close">✕</button>
+  </div>
+  <div class="chat-messages" id="chat-messages">
+    <div class="msg bot">
+      <div class="msg-bubble">Hey! I'm Osvaldo's AI assistant. Ask me anything about his background, skills, certifications, or projects. 👋</div>
+      <div class="msg-time">just now</div>
+    </div>
+  </div>
+  <div class="chat-suggestions" id="chat-suggestions">
+    <button class="suggestion-btn">What tools is he certified in?</button>
+    <button class="suggestion-btn">Tell me about his AI work</button>
+    <button class="suggestion-btn">What's his biggest impact?</button>
+    <button class="suggestion-btn">Is he open to work?</button>
+  </div>
+  <div class="chat-input-row">
+    <input type="text" id="chat-input" placeholder="Ask anything about Osvaldo..." autocomplete="off" />
+    <button id="chat-send">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+// ── SQL LOADER ────────────────────────────────────────────────
+(function() {
+  const loader = document.getElementById('sql-loader');
+  const container = document.getElementById('sql-lines');
+
+  // Sequence: each entry = [delayMs, html, barId?, barTargetPct?]
+  const SEQUENCE = [
+    [0,    '<span class="sql-c-muted">-- portfolio_db v2.5 · connecting...</span>'],
+    [400,  ''],
+    [600,  '<span class="sql-c-kw">SELECT</span> <span class="sql-c-white">*</span>'],
+    [300,  '<span class="sql-c-kw">FROM</span>   <span class="sql-c-fn">candidates</span>'],
+    [300,  '<span class="sql-c-kw">WHERE</span>  <span class="sql-c-fn">name</span>         <span class="sql-c-white">= </span><span class="sql-c-val">\'Osvaldo Sanchez\'</span>'],
+    [250,  '  <span class="sql-c-kw">AND</span>  <span class="sql-c-fn">open_to_work</span>  <span class="sql-c-white">= </span><span class="sql-c-val">TRUE</span>'],
+    [250,  '  <span class="sql-c-kw">AND</span>  <span class="sql-c-fn">certifications</span> <span class="sql-c-white">&gt;= </span><span class="sql-c-num">6</span>'],
+    [250,  '  <span class="sql-c-kw">AND</span>  <span class="sql-c-fn">ms_degree</span>     <span class="sql-c-white">= </span><span class="sql-c-val">\'Applied AI\'</span><span class="sql-c-white">;</span>'],
+    [500,  ''],
+    [200,  '<span class="sql-c-dim">Running query</span><span class="sql-c-muted">.........................</span><span class="sql-c-ok"> ✓</span>'],
+    [600,  '<span class="sql-c-ok">→ 1 row returned.</span>'],
+    [500,  ''],
+    [200,  '<span class="sql-c-dim">Loading </span><span class="sql-c-accent">skills</span><span class="sql-c-dim">          </span><span class="sql-bar-wrap"><span class="sql-bar" id="bar-skills"></span> <span class="sql-bar-pct" id="pct-skills">0%</span></span>', 'skills', 100],
+    [900,  '<span class="sql-c-dim">Loading </span><span class="sql-c-accent">experience</span><span class="sql-c-dim">      </span><span class="sql-bar-wrap"><span class="sql-bar" id="bar-exp"></span> <span class="sql-bar-pct" id="pct-exp">0%</span></span><span class="sql-c-ok" id="ok-exp"></span>', 'exp', 100],
+    [900,  '<span class="sql-c-dim">Loading </span><span class="sql-c-accent">certifications</span><span class="sql-c-dim">  </span><span class="sql-bar-wrap"><span class="sql-bar" id="bar-certs"></span> <span class="sql-bar-pct" id="pct-certs">0%</span></span><span class="sql-c-ok" id="ok-certs"></span>', 'certs', 100],
+    [900,  '<span class="sql-c-dim">Initializing </span><span class="sql-c-accent">AI layer</span><span class="sql-c-dim">    </span><span class="sql-bar-wrap"><span class="sql-bar" id="bar-ai" style="background:var(--accent4)"></span> <span class="sql-bar-pct" id="pct-ai" style="color:var(--accent4)">0%</span></span><span class="sql-c-ok" id="ok-ai"></span>', 'ai', 100],
+    [1100, ''],
+    [200,  '<span class="sql-c-ok">Query complete.</span>'],
+    [400,  '<span class="sql-c-accent">Welcome.</span><span class="sql-cursor"></span>'],
+  ];
+
+  let skipped = false;
+  let timeouts = [];
+
+  function animateBar(id, onDone) {
+    const bar = document.getElementById('bar-' + id);
+    const pct = document.getElementById('pct-' + id);
+    const ok  = document.getElementById('ok-' + id);
+    if (!bar || !pct) { if (onDone) onDone(); return; }
+    bar.style.width = '120px';
+    let n = 0;
+    const iv = setInterval(() => {
+      n = Math.min(n + Math.floor(Math.random() * 18) + 6, 100);
+      pct.textContent = n + '%';
+      if (n >= 100) {
+        clearInterval(iv);
+        pct.textContent = '100%';
+        if (ok) ok.textContent = '  ✓';
+        if (onDone) onDone();
+      }
+    }, 55);
+  }
+
+  function runSequence(idx) {
+    if (skipped || idx >= SEQUENCE.length) {
+      if (!skipped) setTimeout(dismiss, 600);
+      return;
+    }
+    const [delay, html, barId] = SEQUENCE[idx];
+    const t = setTimeout(() => {
+      const line = document.createElement('span');
+      line.className = 'sql-line';
+      line.innerHTML = html || ' ';
+      container.appendChild(line);
+      requestAnimationFrame(() => { line.classList.add('show'); });
+      container.scrollTop = container.scrollHeight;
+
+      if (barId) {
+        setTimeout(() => {
+          animateBar(barId, () => {
+            runSequence(idx + 1);
+          });
+        }, 80);
+      } else {
+        runSequence(idx + 1);
+      }
+    }, delay);
+    timeouts.push(t);
+  }
+
+  function dismiss() {
+    loader.style.transition = 'opacity 0.9s cubic-bezier(0.4,0,0.2,1)';
+    loader.classList.add('fade-out');
+    // Start hero animations just as the loader begins to disappear
+    setTimeout(() => { document.body.classList.add('hero-ready'); }, 200);
+    setTimeout(() => { loader.style.display = 'none'; }, 950);
+  }
+
+  function skip() {
+    if (skipped) return;
+    skipped = true;
+    timeouts.forEach(clearTimeout);
+    dismiss();
+  }
+
+  document.addEventListener('keydown', skip);
+  document.addEventListener('click', skip);
+  document.getElementById('sql-skip').addEventListener('click', skip);
+
+  runSequence(0);
+})();
+
+// ── SPACE SHOOTER ─────────────────────────────────────────────
+(function() {
+  const gc   = document.getElementById('game-canvas');
+  const gctx = gc.getContext('2d');
+  let GW, GH;
+  function resizeGame() { GW = gc.width = window.innerWidth; GH = gc.height = window.innerHeight; }
+  resizeGame(); window.addEventListener('resize', resizeGame);
+
+  const ship = { x: GW/2, y: GH/2, tx: GW/2, ty: GH/2, angle: 0, trail: [] };
+  let kills = 0;
+  const bullets  = [];
+  const enemies  = [];
+  const particles= [];
+  let lastShot   = 0;
+  let spawnTimer = 0;
+  const MAX_ENEMIES = 2;
+
+  // Only active when hero is visible
+  let heroVisible = true;
+  const heroEl = document.getElementById('hero');
+  const heroObs = new IntersectionObserver(entries => {
+    heroVisible = entries[0].isIntersecting;
+    if (!heroVisible) {
+      enemies.length = 0; bullets.length = 0;
+      particles.length = 0; ship.trail.length = 0;
+    }
+  }, { threshold: 0.15 });
+  heroObs.observe(heroEl);
+
+  // Enemy types — polygon asteroids
+  const TYPES = [
+    { label:'NULL',       r:14, speed:0.5,  hp:1, color:'#00f5c4', pts:1 },
+    { label:'BAD_DATA',   r:20, speed:0.32, hp:2, color:'#0066ff', pts:2 },
+    { label:'LEGACY_ETL', r:28, speed:0.18, hp:3, color:'#a855f7', pts:3 },
+    { label:'XLS_HELL',   r:17, speed:0.42, hp:1, color:'#ff3d6b', pts:1 },
+  ];
+
+  const DATA_CHARS = ['SELECT','NULL','JOIN','WHERE','NaN','ETL','01','>>','{}','[]','FROM','DROP','API','RAG','AI','SQL','--','0x','&&','!='];
+  function makeAsteroidShape(r, seed) {
+    const pts = 7 + Math.floor(seed * 4), verts = [];
+    for (let i = 0; i < pts; i++) {
+      const ang = (i/pts)*Math.PI*2, jitter = 0.52+((seed*13.7+i*7.3)%1)*0.48;
+      verts.push({ a: ang, r: r*jitter });
+    }
+    return verts;
+  }
+
+  const KILLS_MSG = ['Automated!','Cleaned!','Migrated!','Optimized!','Deleted!','Fixed!','Deployed!'];
+
+  document.addEventListener('mousemove', e => { ship.tx = e.clientX; ship.ty = e.clientY; });
+  document.addEventListener('click', e => {
+    if (!heroVisible) return;
+    if (e.target.closest('a,button,input,#saw-overlay,#chat-window,#sql-loader')) return;
+    shoot();
+  });
+
+  function shoot() {
+    const now = Date.now();
+    if (now - lastShot < 200) return;
+    lastShot = now;
+    bullets.push({ x: ship.x, y: ship.y, vx: Math.cos(ship.angle)*13, vy: Math.sin(ship.angle)*13 });
+  }
+
+  function spawnEnemy() {
+    if (enemies.length >= MAX_ENEMIES) return;
+    const type = TYPES[Math.floor(Math.random() * TYPES.length)];
+    const side = Math.floor(Math.random() * 4);
+    let x, y;
+    if (side === 0) { x = Math.random()*GW; y = -50; }
+    else if (side === 1) { x = GW+50; y = Math.random()*GH; }
+    else if (side === 2) { x = Math.random()*GW; y = GH+50; }
+    else { x = -50; y = Math.random()*GH; }
+    const ang = Math.atan2(GH/2 - y, GW/2 - x) + (Math.random()-0.5)*0.6;
+    const seed = Math.random();
+    enemies.push({ ...type, x, y, vx: Math.cos(ang)*type.speed, vy: Math.sin(ang)*type.speed,
+      rot: 0, rotSpeed: (Math.random()-0.5)*0.013,
+      shape: makeAsteroidShape(type.r, seed), maxHp: type.hp, flash: 0 });
+  }
+
+  function explode(x, y, color, count) {
+    for (let i = 0; i < count; i++) {
+      const ang = Math.random()*Math.PI*2, spd = Math.random()*3.5+0.8;
+      particles.push({
+        x, y, vx: Math.cos(ang)*spd, vy: Math.sin(ang)*spd + 0.4,
+        life: 1, decay: Math.random()*0.022+0.015,
+        char: DATA_CHARS[Math.floor(Math.random()*DATA_CHARS.length)],
+        color, size: Math.floor(Math.random()*3)+8
+      });
+    }
+  }
+
+  function killToast(x, y) {
+    kills++;
+    document.getElementById('kill-count').textContent = kills;
+    const hud = document.getElementById('game-hud');
+    hud.classList.add('flash');
+    setTimeout(() => hud.classList.remove('flash'), 300);
+    const t = document.createElement('div');
+    t.className = 'kill-toast';
+    t.textContent = KILLS_MSG[Math.floor(Math.random()*KILLS_MSG.length)];
+    t.style.left = Math.min(Math.max(x-40, 10), window.innerWidth-140) + 'px';
+    t.style.top  = (y - 10) + 'px';
+    t.style.color = '#00f5c4';
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 1150);
+  }
+
+  // Draw ship as a sleek triangular spaceship
+  function drawShip(x, y, angle) {
+    gctx.save();
+    gctx.globalAlpha = 0.5;
+    gctx.translate(x, y);
+    gctx.rotate(angle + Math.PI/2);
+    gctx.shadowBlur = 8;
+    gctx.shadowColor = 'rgba(0,245,196,0.4)';
+    gctx.beginPath();
+    gctx.moveTo(0, -13);
+    gctx.lineTo(7, 7);
+    gctx.lineTo(0, 3);
+    gctx.lineTo(-7, 7);
+    gctx.closePath();
+    gctx.fillStyle = 'rgba(0,245,196,0.08)';
+    gctx.fill();
+    gctx.strokeStyle = '#00f5c4';
+    gctx.lineWidth = 1.2;
+    gctx.stroke();
+    gctx.beginPath();
+    gctx.arc(0, -3, 2, 0, Math.PI*2);
+    gctx.fillStyle = 'rgba(0,245,196,0.45)';
+    gctx.fill();
+    const flameH = 4 + Math.random()*4;
+    gctx.beginPath();
+    gctx.moveTo(-3, 7); gctx.lineTo(0, 7+flameH); gctx.lineTo(3, 7);
+    gctx.strokeStyle = 'rgba(0,245,196,0.35)';
+    gctx.lineWidth = 1.5;
+    gctx.stroke();
+    gctx.shadowBlur = 0;
+    gctx.restore();
+
+    // Trail
+    ship.trail.push({ x, y, life: 1 });
+    if (ship.trail.length > 12) ship.trail.shift();
+    ship.trail.forEach((p, i) => {
+      const a = (i / ship.trail.length) * 0.18 * p.life;
+      const r = (i / ship.trail.length) * 2;
+      gctx.beginPath();
+      gctx.arc(p.x, p.y, r, 0, Math.PI*2);
+      gctx.fillStyle = `rgba(0,245,196,${a})`;
+      gctx.fill();
+      p.life -= 0.07;
+    });
+  }
+
+  function drawBullet(b) {
+    gctx.save();
+    gctx.shadowBlur = 8;
+    gctx.shadowColor = '#00f5c4';
+    gctx.beginPath();
+    gctx.moveTo(b.x, b.y);
+    gctx.lineTo(b.x - b.vx*1.5, b.y - b.vy*1.5);
+    gctx.strokeStyle = '#00f5c4';
+    gctx.lineWidth = 2.5;
+    gctx.lineCap = 'round';
+    gctx.stroke();
+    gctx.shadowBlur = 0;
+    gctx.restore();
+  }
+
+  function drawEnemy(e) {
+    gctx.save();
+    gctx.globalAlpha = e.flash > 0 ? 0.92 : 0.72;
+    gctx.translate(e.x, e.y);
+    e.rot += e.rotSpeed;
+    gctx.rotate(e.rot);
+    gctx.shadowBlur = e.flash > 0 ? 18 : 8; gctx.shadowColor = e.color;
+    gctx.beginPath();
+    e.shape.forEach((v,i) => {
+      const px=Math.cos(v.a)*v.r, py=Math.sin(v.a)*v.r;
+      i===0 ? gctx.moveTo(px,py) : gctx.lineTo(px,py);
+    });
+    gctx.closePath();
+    const hx=e.color.slice(1), rr=parseInt(hx.slice(0,2),16), gg=parseInt(hx.slice(2,4),16), bb=parseInt(hx.slice(4,6),16);
+    gctx.fillStyle=`rgba(${rr},${gg},${bb},0.08)`; gctx.fill();
+    gctx.strokeStyle=e.color; gctx.lineWidth=e.flash>0?2:1.4; gctx.stroke();
+    // Crater details
+    gctx.shadowBlur=0; gctx.globalAlpha=(e.flash>0?0.92:0.72)*0.3;
+    const cr=e.r*0.28;
+    gctx.beginPath(); gctx.arc(-cr,-cr*0.5,cr*0.5,0,Math.PI*2); gctx.strokeStyle=e.color; gctx.lineWidth=0.7; gctx.stroke();
+    gctx.beginPath(); gctx.arc(cr*0.6,cr*0.4,cr*0.32,0,Math.PI*2); gctx.stroke();
+    // Label
+    gctx.shadowBlur=5; gctx.shadowColor=e.color; gctx.globalAlpha=e.flash>0?0.95:0.7;
+    gctx.font=`bold ${Math.max(7,e.r*0.42)}px JetBrains Mono,monospace`;
+    gctx.fillStyle=e.color; gctx.textAlign='center'; gctx.textBaseline='middle';
+    gctx.fillText(e.label,0,0);
+    // HP bar
+    if(e.maxHp>1){
+      const bw=e.r*1.5; gctx.shadowBlur=0; gctx.globalAlpha=0.55;
+      gctx.fillStyle='rgba(0,0,0,0.4)'; gctx.fillRect(-bw/2,e.r+4,bw,2.5);
+      gctx.fillStyle=e.color; gctx.fillRect(-bw/2,e.r+4,bw*(e.hp/e.maxHp),2.5);
+    }
+    if(e.flash>0) e.flash-=0.18;
+    gctx.restore();
+  }
+
+  function gameLoop() {
+    gctx.clearRect(0, 0, GW, GH);
+
+    if (!heroVisible) { requestAnimationFrame(gameLoop); return; }
+
+    // Ship
+    const dx = ship.tx - ship.x, dy = ship.ty - ship.y;
+    ship.x += dx * 0.08; ship.y += dy * 0.08;
+    if (Math.abs(dx) > 1 || Math.abs(dy) > 1) ship.angle = Math.atan2(dy, dx);
+    drawShip(ship.x, ship.y, ship.angle);
+
+    // Bullets
+    for (let i = bullets.length-1; i >= 0; i--) {
+      const b = bullets[i];
+      b.x += b.vx; b.y += b.vy;
+      if (b.x < -20 || b.x > GW+20 || b.y < -20 || b.y > GH+20) { bullets.splice(i,1); continue; }
+      // draw bullet
+      gctx.save();
+      gctx.globalAlpha = 0.65;
+      gctx.shadowBlur = 5; gctx.shadowColor = '#00f5c4';
+      gctx.beginPath();
+      gctx.moveTo(b.x, b.y); gctx.lineTo(b.x-b.vx*1.3, b.y-b.vy*1.3);
+      gctx.strokeStyle = '#00f5c4'; gctx.lineWidth = 2; gctx.lineCap = 'round'; gctx.stroke();
+      gctx.shadowBlur = 0; gctx.restore();
+      let hit = false;
+      for (let j = enemies.length-1; j >= 0; j--) {
+        const e = enemies[j];
+        if (Math.hypot(b.x-e.x, b.y-e.y) < e.r+5) {
+          e.hp--; e.flash = 1; bullets.splice(i,1); hit = true;
+          if (e.hp <= 0) { explode(e.x, e.y, e.color, 10); killToast(e.x, e.y); enemies.splice(j,1); }
+          break;
+        }
+      }
+      if (hit) continue;
+    }
+
+    // Spawn — one at a time, slow, hard cap at 2
+    spawnTimer++;
+    if (spawnTimer >= 200 && enemies.length < MAX_ENEMIES) { spawnTimer = 0; spawnEnemy(); }
+
+    for (let i = enemies.length-1; i >= 0; i--) {
+      const e = enemies[i];
+      e.x += e.vx; e.y += e.vy;
+      if (e.x < -100 || e.x > GW+100 || e.y < -100 || e.y > GH+100) { enemies.splice(i,1); continue; }
+      drawEnemy(e);
+    }
+
+    // Matrix text particles
+    for (let i = particles.length-1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx; p.y += p.vy;
+      p.vx *= 0.91; p.vy *= 0.91;
+      p.life -= p.decay;
+      if (p.life <= 0) { particles.splice(i,1); continue; }
+      gctx.save();
+      gctx.globalAlpha = p.life * 0.85;
+      gctx.font = `bold ${p.size}px JetBrains Mono,monospace`;
+      gctx.fillStyle = p.color;
+      gctx.shadowBlur = 6; gctx.shadowColor = p.color;
+      gctx.textAlign = 'center'; gctx.textBaseline = 'middle';
+      gctx.fillText(p.char, p.x, p.y);
+      gctx.restore();
+    }
+
+    requestAnimationFrame(gameLoop);
+  }
+
+  // Start with just 1 enemy, let the second spawn naturally
+  setTimeout(() => { spawnEnemy(); gameLoop(); }, 1800);
+})();
+
+// ── CURSOR (active outside hero) ─────────────────────────────
+const cursor = document.getElementById('cursor');
+const cursorRing = document.getElementById('cursorRing');
+let cmx = 0, cmy = 0, crx = 0, cry = 0;
+
+document.addEventListener('mousemove', e => {
+  cmx = e.clientX; cmy = e.clientY;
+  cursor.style.left = cmx - 5 + 'px';
+  cursor.style.top  = cmy - 5 + 'px';
+});
+(function animCursorRing() {
+  crx += (cmx - crx - 18) * 0.18;
+  cry += (cmy - cry - 18) * 0.18;
+  cursorRing.style.left = crx + 'px';
+  cursorRing.style.top  = cry + 'px';
+  requestAnimationFrame(animCursorRing);
+})();
+document.querySelectorAll('a,button').forEach(el => {
+  el.addEventListener('mouseenter', () => { cursor.style.transform = 'scale(2)'; cursorRing.style.transform = 'scale(1.5)'; });
+  el.addEventListener('mouseleave', () => { cursor.style.transform = 'scale(1)';  cursorRing.style.transform = 'scale(1)'; });
+});
+
+// Show/hide cursor based on hero visibility (ship takes over in hero)
+const gameCanvas = document.getElementById('game-canvas');
+const cursorHeroObs = new IntersectionObserver(entries => {
+  const ratio = entries[0].intersectionRatio;
+  const inHero = ratio > 0.25;
+  cursor.style.opacity     = inHero ? '0' : '1';
+  cursorRing.style.opacity = inHero ? '0' : '0.5';
+  if (gameCanvas) gameCanvas.style.opacity = inHero ? '1' : '0';
+}, { threshold: [0, 0.1, 0.25, 0.4, 0.6, 1] });
+cursorHeroObs.observe(document.getElementById('hero'));
+
+// ── TYPED EFFECT ──────────────────────────────────────────────
+const phrases = [
+  'building_etl_pipelines.alteryx',
+  'designing_executive_dashboards.pbix',
+  'automating_enterprise_workflows.py',
+  'certified_and_shipping_to_prod()',
+  'rag_pipeline_for_finance.ipynb',
+];
+let pi=0, ci=0, del=false;
+const el = document.getElementById('typed');
+function type() {
+  const p = phrases[pi];
+  if (!del) {
+    el.textContent = p.slice(0,++ci);
+    if (ci===p.length) { del=true; setTimeout(type,1800); return; }
+    setTimeout(type,60);
+  } else {
+    el.textContent = p.slice(0,--ci);
+    if (ci===0) { del=false; pi=(pi+1)%phrases.length; setTimeout(type,400); return; }
+    setTimeout(type,35);
+  }
+}
+setTimeout(type, 1200);
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+function resize() { W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; }
+resize(); window.addEventListener('resize', resize);
+class Node {
+  constructor() { this.reset(); }
+  reset() {
+    this.x=Math.random()*W; this.y=Math.random()*H;
+    this.vx=(Math.random()-.5)*.4; this.vy=(Math.random()-.5)*.4;
+    this.r=Math.random()*1.5+.5; this.alpha=Math.random()*.4+.15;
+  }
+  update() {
+    this.x+=this.vx; this.y+=this.vy;
+    if(this.x<0||this.x>W) this.vx*=-1;
+    if(this.y<0||this.y>H) this.vy*=-1;
+  }
+  draw() { ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,Math.PI*2); ctx.fillStyle=`rgba(0,245,196,${this.alpha})`; ctx.fill(); }
+}
+const nodes=[];
+for(let i=0;i<80;i++) nodes.push(new Node());
+let mx2=0, my2=0;
+document.addEventListener('mousemove', e => { mx2=e.clientX; my2=e.clientY; });
+(function animate() {
+  ctx.clearRect(0,0,W,H);
+  nodes.forEach(n => { n.update(); n.draw(); });
+  for(let i=0;i<nodes.length;i++) {
+    for(let j=i+1;j<nodes.length;j++) {
+      const dx=nodes[i].x-nodes[j].x, dy=nodes[i].y-nodes[j].y, d=Math.sqrt(dx*dx+dy*dy);
+      if(d<120) { ctx.beginPath(); ctx.moveTo(nodes[i].x,nodes[i].y); ctx.lineTo(nodes[j].x,nodes[j].y); ctx.strokeStyle=`rgba(0,102,255,${(1-d/120)*.1})`; ctx.lineWidth=.5; ctx.stroke(); }
+    }
+    const dx=nodes[i].x-mx2, dy=nodes[i].y-my2, d=Math.sqrt(dx*dx+dy*dy);
+    if(d<160) { ctx.beginPath(); ctx.moveTo(nodes[i].x,nodes[i].y); ctx.lineTo(mx2,my2); ctx.strokeStyle=`rgba(0,245,196,${(1-d/160)*.35})`; ctx.lineWidth=.6; ctx.stroke(); }
+  }
+  requestAnimationFrame(animate)})();
+
+const obs = new IntersectionObserver(entries => { entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); }); }, { threshold: 0.1 });
+document.querySelectorAll('.reveal').forEach(r => obs.observe(r));
+
+// ── SAW GAME ─────────────────────────────────────────────────
+const QUESTIONS = [
+  {
+    q: "OpenAI fired Sam Altman on a Friday in November 2023. How many days was he actually out?",
+    options: ["2 days", "4 days", "11 days", "30 days"],
+    correct: 1,
+    trap: 2,
+    feedback: {
+      correct: "Exactly. Back by Monday. The fastest corporate plot twist in Silicon Valley history. 🍿",
+      wrong: "Nope. It was 4 chaotic days. The board tried. The board lost."
+    }
+  },
+  {
+    q: "Which country was the FIRST to officially ban ChatGPT?",
+    options: ["China", "Russia", "Italy", "North Korea"],
+    correct: 2,
+    trap: 0,
+    feedback: {
+      correct: "Italy. March 2023. The land of pasta and GDPR drama. They unblocked it a month later. 🍝",
+      wrong: "Obvious answer, wrong answer. Italy beat everyone to it in March 2023. That's the trap."
+    }
+  },
+  {
+    q: "Elon Musk co-founded OpenAI, then sued them, then launched his own AI company. What's it called?",
+    options: ["TruthAI", "Grok", "xAI", "DeepMind"],
+    correct: 2,
+    trap: 1,
+    feedback: {
+      correct: "xAI. Grok is just the chatbot. The company is xAI. Details matter. 🎯",
+      wrong: "Grok is the chatbot, not the company. The company is xAI. Classic trap. 🪤"
+    }
+  },
+  {
+    q: "What does 'hallucination' mean when we talk about AI?",
+    options: [
+      "The model overheats and crashes",
+      "The model confidently makes stuff up",
+      "The model refuses to answer",
+      "The model runs too slow"
+    ],
+    correct: 1,
+    trap: 2,
+    feedback: {
+      correct: "Yep. The model invents facts with full confidence. The scariest part? It sounds completely real. 😬",
+      wrong: "That's called a refusal. Hallucination is when the AI confidently lies to your face."
+    }
+  },
+  {
+    q: "Sora, the AI that generates hyper-realistic videos from text, was made by...",
+    options: ["Google DeepMind", "Meta AI", "OpenAI", "Stability AI"],
+    correct: 2,
+    trap: 0,
+    feedback: {
+      correct: "OpenAI, 2024. If you haven't seen the demos, stop what you're doing. 🎬",
+      wrong: "Google's been chasing this too, but Sora is OpenAI's. The trap worked. 🪤"
+    }
+  },
+  {
+    q: "The movie 'Ex Machina' ends with Ava — the AI robot — doing what?",
+    options: [
+      "Falling in love with Caleb",
+      "Shutting herself down voluntarily",
+      "Escaping and leaving Caleb to die",
+      "Merging with the internet"
+    ],
+    correct: 2,
+    trap: 0,
+    feedback: {
+      correct: "She manipulated everyone, escaped, and left Caleb locked in. Best AI villain arc ever. 🤖🔪",
+      wrong: "She did NOT fall in love. She used him. Then left him to die. That's the whole point of the movie."
+    }
+  },
+  {
+    q: "RAG stands for Retrieval-Augmented Generation. What problem does it mainly solve?",
+    options: [
+      "AI running too slow",
+      "AI making stuff up (hallucinations)",
+      "AI being too expensive",
+      "AI understanding images"
+    ],
+    correct: 1,
+    trap: 3,
+    feedback: {
+      correct: "Exactly. RAG gives the model real documents to reference, so it stops inventing. Osvaldo literally built one for his thesis. 👀",
+      wrong: "RAG's superpower is grounding the AI in real data — fighting hallucinations. Speed and cost are different problems."
+    }
+  }
+];
+
+const ENDINGS = {
+  dead: {
+    icon: "💀",
+    cls: "dead",
+    title: "GAME OVER.",
+    sub: "The machines are not impressed.\nMaybe stick to Excel for now.",
+    cta: null
+  },
+  survive: {
+    icon: "😰",
+    cls: "survive",
+    title: "You survived.\nBarely.",
+    sub: "You know enough to be dangerous.\nBut the AI overlords are watching.",
+    cta: "✉ Contact Osvaldo"
+  },
+  win: {
+    icon: "🤖",
+    cls: "win",
+    title: "The AI overlords\naccept you.",
+    sub: "Genuinely impressive. You passed the test.\nOsvaldo would probably enjoy talking to you.",
+    cta: "✉ Let's talk →"
+  }
+};
+
+let currentQ = 0, score = 0, timerInterval = null, answered = false;
+
+const overlay    = document.getElementById('saw-overlay');
+const introEl    = document.getElementById('saw-intro');
+const questionEl = document.getElementById('saw-question-screen');
+const endingEl   = document.getElementById('saw-ending');
+
+function showScreen(name) {
+  introEl.style.display    = name === 'intro'    ? 'flex' : 'none';
+  questionEl.style.display = name === 'question' ? 'flex' : 'none';
+  endingEl.style.display   = name === 'ending'   ? 'flex' : 'none';
+}
+
+document.getElementById('saw-trigger').addEventListener('mouseenter', function() {
+  this.style.color = '#cc0000';
+});
+document.getElementById('saw-trigger').addEventListener('mouseleave', function() {
+  this.style.color = '#1a1f2e';
+});
+document.getElementById('saw-trigger').addEventListener('click', () => {
+  overlay.classList.add('active');
+  showScreen('intro');
+});
+document.getElementById('saw-exit-intro').addEventListener('click', closeGame);
+document.getElementById('saw-exit-ending').addEventListener('click', closeGame);
+document.getElementById('saw-start-btn').addEventListener('click', startGame);
+document.getElementById('saw-retry').addEventListener('click', startGame);
+
+function closeGame() {
+  overlay.classList.remove('active');
+  clearInterval(timerInterval);
+}
+
+function startGame() {
+  currentQ = 0; score = 0;
+  buildPips();
+  showScreen('question');
+  loadQuestion();
+}
+
+function buildPips() {
+  const pips = document.getElementById('saw-pips');
+  pips.innerHTML = '';
+  for (let i = 0; i < 7; i++) {
+    const p = document.createElement('div');
+    p.className = 'saw-pip';
+    p.id = 'pip-' + i;
+    pips.appendChild(p);
+  }
+}
+
+function loadQuestion() {
+  answered = false;
+  clearInterval(timerInterval);
+  const q = QUESTIONS[currentQ];
+  document.getElementById('saw-qnum').textContent = 'Question ' + (currentQ + 1) + ' / 7';
+  document.getElementById('saw-q-text').textContent = q.q;
+  document.getElementById('saw-feedback').textContent = '';
+  document.getElementById('saw-feedback').className = 'saw-feedback';
+
+  const opts = document.getElementById('saw-options');
+  opts.innerHTML = '';
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'saw-option';
+    btn.textContent = opt;
+    btn.addEventListener('click', () => selectAnswer(i));
+    opts.appendChild(btn);
+  });
+
+  startTimer(15);
+}
+
+function startTimer(seconds) {
+  let remaining = seconds;
+  const ring = document.getElementById('saw-ring');
+  const numEl = document.getElementById('saw-timer-num');
+  const circumference = 125.6;
+  ring.style.strokeDashoffset = '0';
+  ring.style.stroke = '#cc0000';
+  numEl.textContent = remaining;
+
+  timerInterval = setInterval(() => {
+    remaining--;
+    numEl.textContent = remaining;
+    const offset = circumference * (1 - remaining / seconds);
+    ring.style.strokeDashoffset = offset;
+    if (remaining <= 5) ring.style.stroke = '#ff0000';
+    if (remaining <= 0) {
+      clearInterval(timerInterval);
+      if (!answered) timeOut();
+    }
+  }, 1000);
+}
+
+function timeOut() {
+  answered = true;
+  const q = QUESTIONS[currentQ];
+  const opts = document.getElementById('saw-options');
+  [...opts.children].forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === q.correct) btn.classList.add('reveal');
+  });
+  const fb = document.getElementById('saw-feedback');
+  fb.textContent = "⏱ Time's up. " + q.feedback.wrong;
+  fb.className = 'saw-feedback bad';
+  const pip = document.getElementById('pip-' + currentQ);
+  if (pip) pip.classList.add('wrong');
+  setTimeout(nextQuestion, 2200);
+}
+
+function selectAnswer(idx) {
+  if (answered) return;
+  answered = true;
+  clearInterval(timerInterval);
+  const q = QUESTIONS[currentQ];
+  const opts = document.getElementById('saw-options');
+  const fb = document.getElementById('saw-feedback');
+  [...opts.children].forEach(btn => btn.disabled = true);
+  const pip = document.getElementById('pip-' + currentQ);
+
+  if (idx === q.correct) {
+    opts.children[idx].classList.add('correct');
+    fb.textContent = '✓ ' + q.feedback.correct;
+    fb.className = 'saw-feedback good';
+    score++;
+    if (pip) pip.classList.add('correct');
+  } else {
+    opts.children[idx].classList.add('wrong');
+    opts.children[q.correct].classList.add('reveal');
+    fb.textContent = '✗ ' + q.feedback.wrong;
+    fb.className = 'saw-feedback bad';
+    if (pip) pip.classList.add('wrong');
+  }
+  setTimeout(nextQuestion, 2200);
+}
+
+function nextQuestion() {
+  currentQ++;
+  if (currentQ < QUESTIONS.length) {
+    loadQuestion();
+  } else {
+    showEnding();
+  }
+}
+
+function showEnding() {
+  showScreen('ending');
+  let ending;
+  if (score <= 2) ending = ENDINGS.dead;
+  else if (score <= 5) ending = ENDINGS.survive;
+  else ending = ENDINGS.win;
+
+  document.getElementById('ending-icon').textContent = ending.icon;
+  const titleEl = document.getElementById('ending-title');
+  titleEl.textContent = ending.title;
+  titleEl.className = 'ending-title ' + ending.cls;
+  document.getElementById('ending-sub').textContent = ending.sub;
+  document.getElementById('ending-score').innerHTML = 'You got <span>' + score + ' / 7</span> correct';
+
+  const ctaEl = document.getElementById('ending-cta');
+  if (ending.cta) {
+    ctaEl.style.display = 'inline-block';
+    ctaEl.textContent = ending.cta;
+  } else {
+    ctaEl.style.display = 'none';
+  }
+}
+
+// ── CHAT WIDGET ──────────────────────────────────────────────
+const OSVALDO_CONTEXT = `
+You are an AI assistant embedded in Osvaldo Sánchez Ramírez's personal portfolio website.
+Your job is to answer questions about Osvaldo in a friendly, concise, and professional way.
+Keep responses short (2-4 sentences max unless detail is truly needed). Be conversational and enthusiastic about his work.
+Never make up information. If something isn't covered here, invite them to reach out directly.
+
+ABOUT OSVALDO:
+- Full name: Osvaldo Sánchez Ramírez
+- Location: Guadalajara, Jalisco, Mexico
+- Email: osvaldosanchezrmz@gmail.com
+- LinkedIn: linkedin.com/in/osvaldo-sanchez-ramirez
+- Open to new opportunities: YES
+
+EDUCATION:
+- M.S. in Applied Artificial Intelligence (BI concentration) — ITESM, completed 2025
+- B.S. in Industrial and Systems Engineering — Universidad Tecmilenio, 2020
+
+CERTIFICATIONS (6 total):
+1. Tableau Certified Data Analyst — Tableau
+2. Alteryx Designer Advanced Certification — Alteryx
+3. Snowflake Data Warehouse Hands-On Essentials — Snowflake
+4. Data Analysis Using Python — IBM
+5. SQL and Relational Databases 101 — IBM
+6. Certificate of High Specialty in Data Science — ITESM
+
+TECHNICAL SKILLS:
+- ETL & Pipelines: Alteryx, SQL, Python, Power Automate, REST APIs
+- BI & Visualization: Power BI, Tableau, DAX, KPI Frameworks
+- Cloud & Warehousing: Snowflake, SQL Server, Data Modeling
+- AI & ML: RAG Pipelines, NLP, FAISS, Sentence Transformers, Scikit-learn, GPT-4o, Prompt Engineering
+
+EXPERIENCE:
+1. JB Poindexter & Co. — Sr. Supply Chain Analyst AI & Analytics (Jan 2025–Present, Houston TX)
+   - Transformer embeddings + semantic clustering → 20% data accuracy improvement
+   - GenAI enterprise deployments with governance frameworks
+   - ~40 hrs/month manual work eliminated via Python automation
+   - Power BI + Snowflake dashboards → 50% faster executive reporting
+   - SQL/Python analytics → 25% lead time reduction
+
+2. Tata Consultancy Services / GE Healthcare — Alteryx Developer (Dec 2023–Jan 2025, GDL MX)
+   - ML attrition model → 18% better workforce planning accuracy (50K+ employee org)
+   - Alteryx automation → 85% manual effort eliminated
+   - ETL re-architecture → 70% pipeline runtime cut
+   - API-integrated Tableau dashboards → eliminated 3-day reporting lag
+
+3. Honeywell — Sr. Data Integration & Analytics Specialist (Aug–Dec 2023, Monterrey MX) [PROMOTED]
+   - SQDIC dashboard from 12+ sources → 95% fewer inconsistencies
+   - Snowflake automation → $60K annual savings
+   - Vendor scorecard 200+ suppliers → 30% compliance increase
+
+4. Honeywell — ISC Analytics Specialist (Oct 2021–Aug 2023, Monterrey MX)
+   - Tableau and Power BI dashboards for supply chain operations
+   - Standardized ETL data models, drove BI adoption
+
+FEATURED PROJECT: S&P 500 Financial RAG Pipeline (ITESM Capstone 2025) — FAISS + sentence-transformer embeddings + GPT-4o-mini generating investment signals from financial news. Metadata-enriched retrieval outperformed text-only context.
+
+LANGUAGES: Spanish (native), English (full professional proficiency)
+`;
+
+const chatBtn = document.getElementById('chat-btn');
+const chatWindow = document.getElementById('chat-window');
+const chatClose = document.getElementById('chat-close');
+const chatMessages = document.getElementById('chat-messages');
+const chatInput = document.getElementById('chat-input');
+const chatSend = document.getElementById('chat-send');
+const chatSuggestions = document.getElementById('chat-suggestions');
+let chatHistory = [];
+let isTyping = false;
+
+chatBtn.addEventListener('click', () => {
+  chatWindow.classList.toggle('open');
+  if (chatWindow.classList.contains('open')) chatInput.focus();
+});
+chatClose.addEventListener('click', () => chatWindow.classList.remove('open'));
+
+chatSuggestions.querySelectorAll('.suggestion-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    sendMessage(btn.textContent);
+    chatSuggestions.style.display = 'none';
+  });
+});
+
+chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(chatInput.value); } });
+chatSend.addEventListener('click', () => sendMessage(chatInput.value));
+
+function getTime() {
+  return new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+}
+
+function appendMessage(role, text) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  div.innerHTML = '<div class="msg-bubble">' + text + '</div><div class="msg-time">' + getTime() + '</div>';
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function showTyping() {
+  const div = document.createElement('div');
+  div.className = 'msg bot'; div.id = 'typing-msg';
+  div.innerHTML = '<div class="msg-bubble"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function removeTyping() {
+  const t = document.getElementById('typing-msg');
+  if (t) t.remove();
+}
+
+async function sendMessage(text) {
+  text = text.trim();
+  if (!text || isTyping) return;
+  chatInput.value = '';
+  chatSend.disabled = true;
+  isTyping = true;
+  appendMessage('user', text);
+  chatHistory.push({ role: 'user', content: text });
+  showTyping();
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: OSVALDO_CONTEXT,
+        messages: chatHistory
+      })
+    });
+    const data = await response.json();
+    const reply = (data.content && data.content[0] && data.content[0].text) || "I'm having trouble connecting right now. Reach Osvaldo directly at osvaldosanchezrmz@gmail.com!";
+    removeTyping();
+    appendMessage('bot', reply);
+    chatHistory.push({ role: 'assistant', content: reply });
+  } catch (err) {
+    removeTyping();
+    appendMessage('bot', "Connection issue! You can reach Osvaldo at osvaldosanchezrmz@gmail.com 📩");
+  }
+  chatSend.disabled = false;
+  isTyping = false;
+}
+</script>
+</body>
+</html>
